@@ -16,7 +16,7 @@
   // indica que el Frontend se abre por separado del Backend y necesita la
   // URL completa para llamar a la API. Ajustar aquí si el Backend corre
   // en otro host o puerto.
-  const API_BASE_URL = "http://127.0.0.1:8000";
+  const API_BASE_URL = "https://core-erp-backend-8pni.onrender.com";
 
   // Clave usada en localStorage para guardar el JWT (la usa auth.js).
   const TOKEN_STORAGE_KEY = "erp_token";
