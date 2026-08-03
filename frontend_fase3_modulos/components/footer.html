@@ -1,0 +1,15 @@
+<!--
+  components/footer.html — Pie de página de Core ERP (Almacén de Exportación).
+
+  Lo inyecta layout.js (fetch + insertAdjacentElement "afterend" sobre
+  #erpApp) en cada página protegida. Usa la clase erp-footer ya
+  definida en erp.css (margin-left que sigue al ancho del sidebar,
+  igual que #erpApp).
+
+  #footerAnio es el único ID que layout.js espera encontrar aquí:
+  pintarFechaYAnio() lo llena con el año actual.
+-->
+<footer class="erp-footer" id="footer">
+  <span>© <span id="footerAnio">2026</span> Core ERP — Almacén de Exportación</span>
+  <span class="text-muted-erp">Panel de administración</span>
+</footer>

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Iniciar sesión — Core ERP Almacén de Exportación</title>
+
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css"
+  />
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css"
+  />
+  <!-- erp.css se carga por consistencia con el resto del Frontend (usa las
+       mismas variables --erp-*), aunque esta página no usa sidebar/navbar. -->
+  <link rel="stylesheet" href="erp.css" />
+
+  <style>
+    /* Estilos propios de login.html. No se agregan a erp.css porque esa
+       hoja documenta explícitamente que cubre sidebar/navbar/footer y las
+       clases *-erp de las páginas de módulo; el login es una página
+       aparte (sin sidebar) y vive mejor en un bloque propio. */
+    body.pagina-login {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--erp-sidebar-bg) 0%, var(--erp-primary-dark) 100%);
+      padding: 20px;
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 380px;
+      background: var(--erp-surface);
+      border-radius: var(--erp-radius);
+      box-shadow: 0 20px 50px rgba(16, 24, 40, 0.35);
+      overflow: hidden;
+    }
+
+    .login-card-header {
+      padding: 32px 32px 8px;
+      text-align: center;
+    }
+
+    .login-card-header .logo-box {
+      width: 52px;
+      height: 52px;
+      margin: 0 auto 14px;
+      border-radius: 12px;
+      background: var(--erp-primary);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 20px;
+    }
+
+    .login-card-header h1 {
+      font-size: 18px;
+      font-weight: 800;
+      margin: 0;
+      color: var(--erp-text);
+    }
+
+    .login-card-header p {
+      font-size: 12.5px;
+      color: var(--erp-text-muted);
+      margin: 4px 0 0;
+    }
+
+    .login-card-body {
+      padding: 24px 32px 32px;
+    }
+
+    #alertaLogin {
+      display: none;
+      font-size: 13px;
+      padding: 10px 12px;
+      margin-bottom: 16px;
+    }
+
+    .btn-erp-primary:disabled {
+      opacity: 0.7;
+    }
+
+    .login-footer {
+      text-align: center;
+      margin-top: 18px;
+      font-size: 11.5px;
+      color: rgba(255, 255, 255, 0.75);
+    }
+  </style>
+</head>
+<body class="pagina-login">
+  <div>
+    <div class="login-card">
+      <div class="login-card-header">
+        <div class="logo-box">EA</div>
+        <h1>Core ERP</h1>
+        <p>Almacén de Exportación</p>
+      </div>
+
+      <div class="login-card-body">
+        <div id="alertaLogin" class="alert alert-danger" role="alert"></div>
+
+        <form id="formLogin" novalidate>
+          <div class="mb-3">
+            <label for="username" class="form-label-erp">Usuario</label>
+            <input
+              type="text"
+              class="form-control"
+              id="username"
+              name="username"
+              autocomplete="username"
+              required
+              autofocus
+            />
+          </div>
+
+          <div class="mb-4">
+            <label for="password" class="form-label-erp">Contraseña</label>
+            <div class="input-group">
+              <input
+                type="password"
+                class="form-control"
+                id="password"
+                name="password"
+                autocomplete="current-password"
+                required
+              />
+              <button
+                type="button"
+                class="btn btn-outline-secondary"
+                id="btnTogglePassword"
+                tabindex="-1"
+                aria-label="Mostrar u ocultar contraseña"
+              >
+                <i class="bi bi-eye"></i>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-erp-primary w-100" id="btnIngresar">
+            <span id="btnIngresarTexto">Ingresar</span>
+            <span
+              id="btnIngresarSpinner"
+              class="spinner-border spinner-border-sm ms-2"
+              role="status"
+              aria-hidden="true"
+              style="display: none"
+            ></span>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <p class="login-footer">Core ERP — Almacén de Exportación · Usuario Administrador único</p>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="auth.js"></script>
+  <script src="ui-components.js"></script>
+  <script>
+    (function () {
+      // Si ya hay una sesión válida, no tiene sentido mostrar el login:
+      // se va directo al dashboard.
+      if (window.Auth && window.Auth.haySesion()) {
+        window.Auth.irADashboard();
+        return;
+      }
+
+      const form = document.getElementById("formLogin");
+      const inputUsername = document.getElementById("username");
+      const inputPassword = document.getElementById("password");
+      const alerta = document.getElementById("alertaLogin");
+      const btnIngresar = document.getElementById("btnIngresar");
+      const btnIngresarTexto = document.getElementById("btnIngresarTexto");
+      const btnIngresarSpinner = document.getElementById("btnIngresarSpinner");
+      const btnTogglePassword = document.getElementById("btnTogglePassword");
+
+      function mostrarError(mensaje) {
+        alerta.textContent = mensaje;
+        alerta.style.display = "block";
+      }
+
+      function ocultarError() {
+        alerta.style.display = "none";
+      }
+
+      function ponerCargando(cargando) {
+        btnIngresar.disabled = cargando;
+        btnIngresarSpinner.style.display = cargando ? "inline-block" : "none";
+        btnIngresarTexto.textContent = cargando ? "Ingresando…" : "Ingresar";
+      }
+
+      btnTogglePassword.addEventListener("click", () => {
+        const icono = btnTogglePassword.querySelector("i");
+        const esTexto = inputPassword.type === "text";
+        inputPassword.type = esTexto ? "password" : "text";
+        icono.classList.toggle("bi-eye", esTexto);
+        icono.classList.toggle("bi-eye-slash", !esTexto);
+      });
+
+      form.addEventListener("submit", async (ev) => {
+        ev.preventDefault();
+        ocultarError();
+
+        const username = inputUsername.value.trim();
+        const password = inputPassword.value;
+
+        if (!username || !password) {
+          mostrarError("Ingresa usuario y contraseña.");
+          return;
+        }
+
+        ponerCargando(true);
+        try {
+          await window.Auth.iniciarSesion(username, password);
+          window.Auth.irADashboard();
+        } catch (err) {
+          mostrarError(err.message || "No se pudo iniciar sesión.");
+          ponerCargando(false);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

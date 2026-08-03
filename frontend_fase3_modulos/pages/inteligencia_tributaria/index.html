@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Inteligencia Tributaria — Core ERP Almacén de Exportación</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" />
+  <link rel="stylesheet" href="../../erp.css" />
+
+  <style>
+    .kpi-card { padding: 16px; }
+    .kpi-label {
+      font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em;
+      color: var(--erp-text-muted); font-weight: 700;
+    }
+    .kpi-value { font-size: clamp(16px, 1.6vw, 24px); font-weight: 800; margin-top: 6px; line-height: 1.2; word-break: break-word; overflow-wrap: anywhere; }
+    .badge-count {
+      font-size: 11px; font-weight: 700; color: var(--erp-text-muted);
+      background: rgba(0,0,0,.05); border-radius: 10px; padding: 1px 8px; vertical-align: middle;
+    }
+    #filtroDesde.is-invalid, #filtroHasta.is-invalid { border-color: #dc3545; }
+  </style>
+</head>
+<body>
+  <div id="erpApp">
+    <div class="page-header">
+      <div>
+        <div class="breadcrumb-erp"><b>Módulos</b> / Inteligencia Tributaria</div>
+        <h1>Inteligencia Tributaria</h1>
+      </div>
+      <div class="filtros-bar">
+        <div class="filtro-item">
+          <label class="form-label-erp" for="filtroDesde">Desde (emisión)</label>
+          <input type="date" id="filtroDesde" class="form-control form-control-sm" />
+        </div>
+        <div class="filtro-item">
+          <label class="form-label-erp" for="filtroHasta">Hasta (emisión)</label>
+          <input type="date" id="filtroHasta" class="form-control form-control-sm" />
+        </div>
+        <button type="button" id="btnAplicarFiltros" class="btn btn-erp-primary btn-sm">
+          <i class="bi bi-funnel me-1"></i>Aplicar
+        </button>
+      </div>
+    </div>
+
+    <div id="estadoError" class="alert alert-danger" style="display:none"></div>
+
+    <!-- KPIs del resumen de IGV -->
+    <div class="row g-3 mb-3">
+      <div class="col-6 col-lg-3">
+        <div class="erp-card kpi-card">
+          <div class="kpi-label">Comprobantes</div>
+          <div class="kpi-value" id="kpiTotalComprobantes">—</div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="erp-card kpi-card">
+          <div class="kpi-label">Subtotal</div>
+          <div class="kpi-value" id="kpiTotalSubtotal">—</div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="erp-card kpi-card">
+          <div class="kpi-label">IGV</div>
+          <div class="kpi-value" id="kpiTotalIgv">—</div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="erp-card kpi-card">
+          <div class="kpi-label">Total general</div>
+          <div class="kpi-value" id="kpiTotalGeneral">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="erp-card mb-3">
+      <div class="card-header-erp"><i class="bi bi-receipt me-1"></i>Resumen IGV por tipo de comprobante <span class="badge-count" id="countResumenTipo"></span></div>
+      <div class="table-responsive-erp">
+        <table class="table-erp">
+          <thead>
+            <tr>
+              <th>Tipo de comprobante</th><th class="text-end">Cantidad</th>
+              <th class="text-end">Subtotal</th><th class="text-end">IGV</th><th class="text-end">Total</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyResumenTipo"><tr><td colspan="5" class="text-muted-erp">Cargando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="erp-card mb-3">
+      <div class="card-header-erp"><i class="bi bi-journal-text me-1"></i>Libro de ventas <span class="badge-count" id="countLibroVentas"></span></div>
+      <div class="table-responsive-erp">
+        <table class="table-erp">
+          <thead>
+            <tr>
+              <th>N.º</th><th>Tipo</th><th>Estado</th><th>Cliente</th>
+              <th class="text-end">Subtotal</th><th class="text-end">IGV</th>
+              <th class="text-end">Total</th><th>Emitido</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyLibroVentas"><tr><td colspan="8" class="text-muted-erp">Cargando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="erp-card">
+      <div class="card-header-erp"><i class="bi bi-x-octagon me-1"></i>Comprobantes anulados <span class="badge-count" id="countAnulados"></span></div>
+      <div class="table-responsive-erp">
+        <table class="table-erp">
+          <thead>
+            <tr>
+              <th>N.º</th><th>Tipo</th><th>Cliente</th><th class="text-end">Total</th>
+              <th>Motivo</th><th>Emitido</th><th>Anulado</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyAnulados"><tr><td colspan="7" class="text-muted-erp">Cargando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+  <script src="../../config.js"></script>
+  <script src="../../auth.js"></script>
+  <script src="../../api-client.js"></script>
+  <script src="../../ui-components.js"></script>
+  <script src="../../utils.js"></script>
+  <script src="../../moneda-config.js"></script>
+  <script src="../../layout.js"></script>
+  <script src="inteligencia_tributaria.js"></script>
+</body>
+</html>

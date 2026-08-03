@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Costos — Core ERP Almacén de Exportación</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" />
+  <link rel="stylesheet" href="../../erp.css" />
+
+  <style>
+    .kpi-card { padding: 16px; }
+    .kpi-label {
+      font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em;
+      color: var(--erp-text-muted); font-weight: 700;
+    }
+    .kpi-value { font-size: clamp(15px, 1.5vw, 22px); font-weight: 800; margin-top: 6px; line-height: 1.2; word-break: break-word; overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>
+  <div id="erpApp">
+    <div class="page-header">
+      <div>
+        <div class="breadcrumb-erp"><b>Módulos</b> / Costos</div>
+        <h1>Costos</h1>
+      </div>
+    </div>
+
+    <div id="estadoError" class="alert alert-danger" style="display:none"></div>
+
+    <div class="row g-3 mb-3">
+      <!-- ===================== Costeo de compra ===================== -->
+      <div class="col-lg-6">
+        <div class="erp-card h-100">
+          <div class="card-header-erp"><i class="bi bi-receipt-cutoff me-1"></i>Costeo de compra (landed cost)</div>
+          <div class="card-body-erp">
+            <form id="formCosteoCompra" class="filtros-bar mb-3">
+              <div class="filtro-item">
+                <label class="form-label-erp" for="inputOrdenCompraId">N.º de orden de compra</label>
+                <input type="number" min="1" id="inputOrdenCompraId" class="form-control form-control-sm" style="width: 160px;" required />
+              </div>
+              <button type="submit" class="btn btn-erp-primary btn-sm">
+                <i class="bi bi-search me-1"></i>Consultar
+              </button>
+            </form>
+
+            <div id="estadoCosteoCompra" class="text-muted-erp" style="display:none">Cargando…</div>
+            <div id="errorCosteoCompra" class="alert alert-danger" style="display:none"></div>
+
+            <div id="resultadoCosteoCompra" style="display:none">
+              <div class="row g-2 mb-3">
+                <div class="col-6">
+                  <div class="erp-card kpi-card">
+                    <div class="kpi-label">Valor mercadería</div>
+                    <div class="kpi-value" id="kpiValorMercaderia">—</div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="erp-card kpi-card">
+                    <div class="kpi-label">Costos adicionales</div>
+                    <div class="kpi-value" id="kpiCostosAdicCompra">—</div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="erp-card kpi-card">
+                    <div class="kpi-label">Costo total</div>
+                    <div class="kpi-value" id="kpiCostoTotalCompra">—</div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="erp-card kpi-card">
+                    <div class="kpi-label">Costo unitario ponderado</div>
+                    <div class="kpi-value" id="kpiCostoUnitarioPonderado">—</div>
+                  </div>
+                </div>
+              </div>
+              <div class="text-muted-erp mb-1" style="font-size: 12px;">
+                Cantidad total: <span id="kpiCantidadTotalCompra">—</span>
+              </div>
+              <div class="table-responsive-erp">
+                <table class="table-erp">
+                  <thead>
+                    <tr><th>Tipo</th><th>Descripción</th><th class="text-end">Monto</th><th>Moneda</th><th>Registrado</th></tr>
+                  </thead>
+                  <tbody id="tbodyDetalleCosteoCompra"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================== Rentabilidad de exportación ===================== -->
+      <div class="col-lg-6">
+        <div class="erp-card h-100">
+          <div class="card-header-erp"><i class="bi bi-graph-up-arrow me-1"></i>Rentabilidad de exportación</div>
+          <div class="card-body-erp">
+            <form id="formRentabilidad" class="filtros-bar mb-3">
+              <div class="filtro-item">
+                <label class="form-label-erp" for="inputDeclaracionId">N.º de declaración de exportación</label>
+                <input type="number" min="1" id="inputDeclaracionId" class="form-control form-control-sm" style="width: 160px;" required />
+              </div>
+              <button type="submit" class="btn btn-erp-primary btn-sm">
+                <i class="bi bi-search me-1"></i>Consultar
+              </button>
+            </form>
+
+            <div id="estadoRentabilidad" class="text-muted-erp" style="display:none">Cargando…</div>
+            <div id="errorRentabilidad" class="alert alert-danger" style="display:none"></div>
+
+            <div id="resultadoRentabilidad" style="display:none">
+              <div class="row g-2 mb-3">
+                <div class="col-6">
+                  <div class="erp-card kpi-card">
+                    <div class="kpi-label">Ingreso exportación</div>
+                    <div class="kpi-value" id="kpiIngresoExportacion">—</div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="erp-card kpi-card">
+                    <div class="kpi-label">Costo mercadería real</div>
+                    <div class="kpi-value" id="kpiCostoMercaderiaReal">—</div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="erp-card kpi-card">
+                    <div class="kpi-label">Costos adicionales</div>
+                    <div class="kpi-value" id="kpiCostosAdicExport">—</div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="erp-card kpi-card">
+                    <div class="kpi-label">Utilidad bruta</div>
+                    <div class="kpi-value" id="kpiUtilidadBruta">—</div>
+                  </div>
+                </div>
+              </div>
+              <div class="text-muted-erp mb-1" style="font-size: 12px;">
+                Margen: <b id="kpiMargenPct">—</b>
+              </div>
+              <div class="table-responsive-erp">
+                <table class="table-erp">
+                  <thead>
+                    <tr><th>Tipo</th><th>Descripción</th><th class="text-end">Monto</th><th>Moneda</th><th>Registrado</th></tr>
+                  </thead>
+                  <tbody id="tbodyDetalleRentabilidad"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== Registrar costo adicional ===================== -->
+    <div class="erp-card">
+      <div class="card-header-erp"><i class="bi bi-plus-circle me-1"></i>Registrar costo adicional</div>
+      <div class="card-body-erp">
+        <div id="errorCostoAdicional" class="alert alert-danger" style="display:none"></div>
+        <form id="formCostoAdicional" class="row g-2 align-items-end">
+          <div class="col-md-2">
+            <label class="form-label-erp" for="campoTipoDocumento">Tipo de documento</label>
+            <select id="campoTipoDocumento" class="form-select form-select-sm" required>
+              <option value="">Seleccionar…</option>
+              <option value="COMPRA">Compra</option>
+              <option value="EXPORTACION">Exportación</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label-erp" for="campoDocumentoId">N.º de documento</label>
+            <input type="number" min="1" id="campoDocumentoId" class="form-control form-control-sm" required />
+          </div>
+          <div class="col-md-2">
+            <label class="form-label-erp" for="campoTipoCosto">Tipo de costo</label>
+            <select id="campoTipoCosto" class="form-select form-select-sm" required>
+              <option value="">Seleccionar…</option>
+              <option value="FLETE">Flete</option>
+              <option value="SEGURO">Seguro</option>
+              <option value="ADUANA">Aduana</option>
+              <option value="ALMACENAJE">Almacenaje</option>
+              <option value="MANIPULEO">Manipuleo</option>
+              <option value="OTRO">Otro</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label-erp" for="campoMonto">Monto</label>
+            <input type="number" min="0.01" step="0.01" id="campoMonto" class="form-control form-control-sm" required />
+          </div>
+          <div class="col-md-1">
+            <label class="form-label-erp" for="campoMoneda">Moneda</label>
+            <input type="text" id="campoMoneda" maxlength="3" class="form-control form-control-sm text-uppercase" value="USD" required />
+          </div>
+          <div class="col-md-2">
+            <label class="form-label-erp" for="campoDescripcion">Descripción</label>
+            <input type="text" id="campoDescripcion" maxlength="255" class="form-control form-control-sm" />
+          </div>
+          <div class="col-md-1">
+            <button type="submit" class="btn btn-erp-primary btn-sm w-100">
+              <i class="bi bi-plus-lg"></i>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+  <script src="../../config.js"></script>
+  <script src="../../auth.js"></script>
+  <script src="../../api-client.js"></script>
+  <script src="../../ui-components.js"></script>
+  <script src="../../utils.js"></script>
+  <script src="../../moneda-config.js"></script>
+  <script src="../../layout.js"></script>
+  <script src="costos.js"></script>
+</body>
+</html>

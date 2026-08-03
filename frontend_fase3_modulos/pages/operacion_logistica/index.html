@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Operación Logística — Core ERP Almacén de Exportación</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" />
+  <link rel="stylesheet" href="../../erp.css" />
+  <style>
+    .nota-contrato { font-size: 11.5px; }
+  </style>
+</head>
+<body>
+  <div id="erpApp">
+    <div class="page-header">
+      <div>
+        <div class="breadcrumb-erp"><b>Módulos</b> / Operación Logística</div>
+        <h1>Operaciones logísticas</h1>
+      </div>
+      <div class="filtros-bar">
+        <button type="button" id="btnNuevaRecepcion" class="btn btn-erp-primary btn-sm">
+          <i class="bi bi-plus-lg me-1"></i>Nueva recepción
+        </button>
+      </div>
+    </div>
+
+    <div id="estadoError" class="alert alert-danger" style="display:none"></div>
+
+    <div class="erp-card">
+      <div class="card-header-erp"><i class="bi bi-signpost-split me-1"></i>Operaciones logísticas</div>
+      <div class="card-body-erp pb-0">
+        <div class="filtros-bar">
+          <div class="filtro-item">
+            <label class="form-label-erp" for="inputBuscarOperaciones">Buscar</label>
+            <input type="text" id="inputBuscarOperaciones" class="form-control form-control-sm" placeholder="N.º, producto, proveedor, lote, vehículo u observaciones…" style="min-width: 260px;" />
+          </div>
+          <div class="filtro-item">
+            <label class="form-label-erp" for="selectEstado">Estado</label>
+            <select id="selectEstado" class="form-select form-select-sm">
+              <option value="">Todos</option>
+              <option value="RECEPCION">Recepción</option>
+              <option value="INSPECCION">Inspección</option>
+              <option value="UBICACION">Ubicación</option>
+              <option value="DISPONIBLE">Disponible</option>
+              <option value="RESERVADO">Reservado</option>
+              <option value="PICKING">Picking</option>
+              <option value="PACKING">Packing</option>
+              <option value="CARGA">Carga</option>
+              <option value="DESPACHO">Despacho</option>
+              <option value="ENTREGADO">Entregado</option>
+              <option value="CERRADO">Cerrado</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="table-responsive-erp">
+        <table class="table-erp">
+          <thead>
+            <tr>
+              <th>N.º</th><th>Producto</th><th>Proveedor</th><th>Lote</th>
+              <th class="text-end">Cantidad</th><th>Estado</th><th>Creada</th><th class="text-end">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyOperaciones"><tr><td colspan="8" class="text-muted-erp">Cargando…</td></tr></tbody>
+        </table>
+      </div>
+      <div class="card-body-erp d-flex flex-wrap align-items-center justify-content-between gap-2 border-top">
+        <div class="d-flex align-items-center gap-2">
+          <span class="text-muted-erp" id="paginacionResumenOperaciones">&nbsp;</span>
+          <select id="selectTamanioPaginaOperaciones" class="form-select form-select-sm" style="width:auto;">
+            <option value="10">10 / página</option>
+            <option value="25">25 / página</option>
+            <option value="50">50 / página</option>
+            <option value="9999">Todos</option>
+          </select>
+        </div>
+        <nav aria-label="Paginación de operaciones logísticas">
+          <ul class="pagination pagination-sm mb-0" id="paginacionControlesOperaciones"></ul>
+        </nav>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Nueva recepción -->
+  <div class="modal fade" id="modalNuevaRecepcion" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <form id="formNuevaRecepcion">
+          <div class="modal-header">
+            <h5 class="modal-title">Nueva recepción</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div id="modalNuevaRecepcionError" class="alert alert-danger" style="display:none"></div>
+
+            <div class="row g-2 mb-2">
+              <div class="col-6">
+                <label class="form-label-erp" for="recProducto">Producto</label>
+                <select id="recProducto" class="form-select form-select-sm" required>
+                  <option value="">Seleccionar…</option>
+                </select>
+              </div>
+              <div class="col-6">
+                <label class="form-label-erp" for="recProveedor">Proveedor</label>
+                <select id="recProveedor" class="form-select form-select-sm" required>
+                  <option value="">Seleccionar…</option>
+                </select>
+              </div>
+            </div>
+            <div class="mb-2">
+              <label class="form-label-erp" for="recOrdenCompra">Orden de compra RECIBIDA (opcional)</label>
+              <select id="recOrdenCompra" class="form-select form-select-sm">
+                <option value="">Ninguna (recepción directa)</option>
+              </select>
+              <div class="form-text">
+                Si ya fue recibida formalmente por una Orden de Compra, selecciónala aquí: esta
+                recepción no vuelve a ingresar stock, solo registra el seguimiento físico. Si la
+                dejas en "Ninguna", esta recepción sí ingresa stock directamente (p. ej. importación
+                sin OC formal).
+              </div>
+            </div>
+            <div class="row g-2 mb-2">
+              <div class="col-4">
+                <label class="form-label-erp" for="recCodigoLote">Código de lote</label>
+                <input type="text" id="recCodigoLote" class="form-control form-control-sm" maxlength="50" required />
+              </div>
+              <div class="col-4">
+                <label class="form-label-erp" for="recCantidad">Cantidad</label>
+                <input type="number" id="recCantidad" class="form-control form-control-sm" min="0.001" step="0.001" required />
+              </div>
+              <div class="col-4">
+                <label class="form-label-erp" for="recCostoUnitario">Costo unitario</label>
+                <input type="number" id="recCostoUnitario" class="form-control form-control-sm" min="0" step="0.0001" required />
+              </div>
+            </div>
+            <div class="mb-2">
+              <label class="form-label-erp" for="recFechaVencimiento">Fecha de vencimiento (opcional)</label>
+              <input type="date" id="recFechaVencimiento" class="form-control form-control-sm" />
+            </div>
+            <div class="mb-2">
+              <label class="form-label-erp" for="recObservaciones">Observaciones (opcional)</label>
+              <textarea id="recObservaciones" class="form-control form-control-sm" rows="2" maxlength="500"></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-erp-primary btn-sm">Registrar recepción</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Detalle de operación -->
+  <div class="modal fade" id="modalDetalleOperacion" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="detalleOperacionTitulo">Operación logística</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div id="modalDetalleOperacionError" class="alert alert-danger" style="display:none"></div>
+          <div class="row g-2 mb-3" id="detalleOperacionInfo"></div>
+
+          <div class="erp-card mb-3" id="cardPasoSiguiente">
+            <div class="card-header-erp"><i class="bi bi-arrow-right-circle me-1"></i><span id="pasoSiguienteTitulo">Siguiente paso</span></div>
+            <div class="card-body-erp">
+              <form id="formPasoSiguiente">
+                <div id="pasoSiguienteError" class="alert alert-danger" style="display:none"></div>
+                <div class="row g-2 mb-2" id="pasoSiguienteCampos"></div>
+                <button type="submit" class="btn btn-erp-primary btn-sm" id="btnEjecutarPaso">Registrar</button>
+              </form>
+            </div>
+          </div>
+
+          <div class="erp-card">
+            <div class="card-header-erp"><i class="bi bi-clock-history me-1"></i>Historial de trazabilidad</div>
+            <div class="table-responsive-erp">
+              <table class="table-erp">
+                <thead>
+                  <tr><th>Fecha y hora</th><th>Usuario</th><th>De</th><th>A</th><th>Observaciones</th></tr>
+                </thead>
+                <tbody id="tbodyHistorial"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+  <script src="../../config.js"></script>
+  <script src="../../auth.js"></script>
+  <script src="../../api-client.js"></script>
+  <script src="../../ui-components.js"></script>
+  <script src="../../utils.js"></script>
+  <script src="../../moneda-config.js"></script>
+  <script src="../../layout.js"></script>
+  <script src="operacion_logistica.js"></script>
+</body>
+</html>

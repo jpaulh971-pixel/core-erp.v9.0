@@ -1,0 +1,535 @@
+/* ==========================================================================
+   erp.css — Estilos propios de Core ERP (Almacén de Exportación).
+
+   Se apoya en Bootstrap 5 + Bootstrap Icons (cargados ANTES que este
+   archivo en cada página). Aquí solo se definen los componentes propios
+   del ERP: layout (sidebar/navbar/footer inyectados por layout.js) y las
+   clases *-erp que ya usan las 5 páginas de módulo y sus page-scripts
+   (page-header, breadcrumb-erp, filtros-bar, filtro-item, form-label-erp,
+   btn-erp-primary, erp-card, card-header-erp, card-body-erp, chart-box,
+   table-responsive-erp, table-erp, text-muted-erp).
+
+   No agrega funcionalidad: solo estilo visual sobre el HTML/JS existente.
+   ========================================================================== */
+
+:root {
+  --erp-primary: #2f6fed;
+  --erp-primary-dark: #2557c2;
+  --erp-bg: #f4f6fa;
+  --erp-surface: #ffffff;
+  --erp-border: #e3e7ef;
+  --erp-text: #1f2733;
+  --erp-text-muted: #6b7688;
+  --erp-sidebar-bg: #101828;
+  --erp-sidebar-text: #aab2c5;
+  --erp-sidebar-w: 260px;
+  --erp-navbar-h: 60px;
+  --erp-footer-h: 44px;
+  --erp-radius: 10px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--erp-bg);
+  color: var(--erp-text);
+  font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+  font-size: 14px;
+}
+
+a {
+  text-decoration: none;
+}
+
+/* ==========================================================================
+   Sidebar (components/sidebar.html)
+   ========================================================================== */
+
+.erp-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: var(--erp-sidebar-w);
+  background: var(--erp-sidebar-bg);
+  color: var(--erp-sidebar-text);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  z-index: 1040;
+  transform: translateX(0);
+  transition: transform 0.2s ease;
+}
+
+.erp-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.erp-sidebar .logo-box {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: var(--erp-primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.erp-sidebar .brand-text {
+  color: #fff;
+  overflow: hidden;
+}
+
+.erp-sidebar .brand-text small {
+  color: var(--erp-sidebar-text);
+}
+
+.erp-nav {
+  flex: 1 1 auto;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.erp-nav .nav-section {
+  margin: 14px 10px 4px;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.35);
+  white-space: nowrap;
+}
+
+.erp-nav .nav-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  color: var(--erp-sidebar-text);
+  font-size: 13.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.erp-nav .nav-link i {
+  flex: 0 0 auto;
+  width: 18px;
+  text-align: center;
+}
+
+.erp-nav .nav-link:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+}
+
+.erp-nav .nav-link.active {
+  background: var(--erp-primary);
+  color: #fff;
+}
+
+.erp-sidebar-footer {
+  padding: 14px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.erp-sidebar-footer a {
+  color: var(--erp-sidebar-text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.erp-sidebar-footer a:hover {
+  color: #fff;
+}
+
+/* ==========================================================================
+   Navbar (components/navbar.html)
+   ========================================================================== */
+
+.erp-navbar {
+  position: fixed;
+  top: 0;
+  left: var(--erp-sidebar-w);
+  right: 0;
+  height: var(--erp-navbar-h);
+  z-index: 1030;
+  background: var(--erp-surface);
+  border-bottom: 1px solid var(--erp-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  transition: left 0.2s ease;
+}
+
+.sidebar-toggle {
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  color: var(--erp-text);
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 6px;
+  line-height: 1;
+}
+
+.sidebar-toggle:hover {
+  background: var(--erp-bg);
+}
+
+.navbar-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--erp-bg);
+  border-radius: 8px;
+  padding: 7px 12px;
+  width: 280px;
+}
+
+.navbar-search i {
+  color: var(--erp-text-muted);
+  font-size: 13px;
+}
+
+.navbar-search input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 13px;
+  width: 100%;
+  color: var(--erp-text);
+}
+
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.navbar-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--erp-text-muted);
+  background: var(--erp-bg);
+  border-radius: 20px;
+  padding: 6px 12px;
+  white-space: nowrap;
+}
+
+.navbar-bell {
+  position: relative;
+  cursor: pointer;
+  color: var(--erp-text-muted);
+  font-size: 17px;
+  padding: 4px;
+}
+
+.navbar-bell .dot {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e5484d;
+}
+
+.navbar-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--erp-primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+  flex: 0 0 auto;
+}
+
+.u-name {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.u-role {
+  font-size: 11px;
+  color: var(--erp-text-muted);
+  line-height: 1.2;
+}
+
+/* ==========================================================================
+   Contenido principal (#erpApp) y footer (components/footer.html)
+   ========================================================================== */
+
+#erpApp {
+  margin-left: var(--erp-sidebar-w);
+  margin-top: var(--erp-navbar-h);
+  padding: 24px;
+  min-height: calc(100vh - var(--erp-navbar-h) - var(--erp-footer-h));
+  transition: margin-left 0.2s ease;
+}
+
+.erp-footer {
+  margin-left: var(--erp-sidebar-w);
+  height: var(--erp-footer-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  font-size: 12px;
+  color: var(--erp-text-muted);
+  border-top: 1px solid var(--erp-border);
+  background: var(--erp-surface);
+  transition: margin-left 0.2s ease;
+}
+
+body.erp-sidebar-hidden .erp-sidebar {
+  transform: translateX(-100%);
+}
+
+body.erp-sidebar-hidden .erp-navbar {
+  left: 0;
+}
+
+body.erp-sidebar-hidden #erpApp,
+body.erp-sidebar-hidden .erp-footer {
+  margin-left: 0;
+}
+
+@media (max-width: 991.98px) {
+  .erp-navbar,
+  #erpApp,
+  .erp-footer {
+    left: 0 !important;
+    margin-left: 0 !important;
+  }
+
+  .erp-sidebar {
+    box-shadow: 0 0 32px rgba(0, 0, 0, 0.3);
+  }
+
+  .navbar-search {
+    width: 200px;
+  }
+}
+
+/* ==========================================================================
+   Encabezado de página (page-header / breadcrumb-erp / filtros-bar)
+   ========================================================================== */
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.page-header h1 {
+  font-size: 22px;
+  font-weight: 800;
+  margin: 4px 0 0;
+}
+
+.breadcrumb-erp {
+  font-size: 12.5px;
+  color: var(--erp-text-muted);
+}
+
+.breadcrumb-erp b {
+  color: var(--erp-text);
+}
+
+.filtros-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: var(--erp-surface);
+  border: 1px solid var(--erp-border);
+  border-radius: var(--erp-radius);
+  padding: 12px 16px;
+}
+
+.filtro-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-label-erp {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--erp-text-muted);
+  margin-bottom: 2px;
+}
+
+.btn-erp-primary {
+  background: var(--erp-primary);
+  border-color: var(--erp-primary);
+  color: #fff;
+  font-weight: 600;
+}
+
+.btn-erp-primary:hover,
+.btn-erp-primary:focus {
+  background: var(--erp-primary-dark);
+  border-color: var(--erp-primary-dark);
+  color: #fff;
+}
+
+/* ==========================================================================
+   Tarjetas, gráficos y tablas (erp-card / chart-box / table-erp)
+   ========================================================================== */
+
+.erp-card {
+  background: var(--erp-surface);
+  border: 1px solid var(--erp-border);
+  border-radius: var(--erp-radius);
+  overflow: hidden;
+}
+
+.card-header-erp {
+  padding: 12px 16px;
+  font-weight: 700;
+  font-size: 13.5px;
+  border-bottom: 1px solid var(--erp-border);
+  background: #fafbfd;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-body-erp {
+  padding: 16px;
+}
+
+.chart-box {
+  background: var(--erp-surface);
+  border: 1px solid var(--erp-border);
+  border-radius: var(--erp-radius);
+  padding: 16px;
+}
+
+.table-responsive-erp {
+  overflow-x: auto;
+}
+
+.table-erp {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.table-erp thead th {
+  text-align: left;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--erp-text-muted);
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--erp-border);
+  background: #fafbfd;
+  white-space: nowrap;
+}
+
+.table-erp tbody td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--erp-border);
+  vertical-align: middle;
+}
+
+.table-erp tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table-erp tbody tr:hover {
+  background: #f7f9fc;
+}
+
+.table-erp tbody tr.table-danger {
+  background: #fdecec;
+}
+
+/* ==========================================================================
+   Utilidades de texto
+   ========================================================================== */
+
+.text-muted-erp {
+  color: var(--erp-text-muted);
+}
+
+/* ==========================================================================
+   FASE F0 — Componentes globales de UI (ui-components.js)
+   Toast notifications y overlay de carga. Ningún módulo los tenía: se
+   agregan aquí para no duplicar estilos inline en ui-components.js.
+   ========================================================================== */
+
+.erp-toast {
+  color: #fff;
+  background: var(--erp-text);
+  border-radius: var(--erp-radius);
+}
+
+.erp-toast-success {
+  background: #1b8a5a;
+}
+
+.erp-toast-error {
+  background: #d64545;
+}
+
+.erp-toast-warning {
+  background: #b8860b;
+}
+
+.erp-toast-info {
+  background: var(--erp-primary);
+}
+
+.erp-loader-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(16, 24, 40, 0.35);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1090;
+}
+
+.erp-loader-overlay.visible {
+  display: flex;
+}

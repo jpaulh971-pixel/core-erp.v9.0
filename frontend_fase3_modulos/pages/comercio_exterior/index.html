@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Comercio Exterior — Core ERP Almacén de Exportación</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" />
+  <link rel="stylesheet" href="../../erp.css" />
+  <style>
+    .nota-contrato { font-size: 11.5px; }
+    .historial-item { display: flex; gap: 10px; padding: 6px 0; border-bottom: 1px dashed var(--erp-border); }
+    .historial-item:last-child { border-bottom: none; }
+    .historial-icono { width: 22px; text-align: center; }
+    .historial-icono.pendiente { color: var(--erp-text-muted); }
+  </style>
+</head>
+<body>
+  <div id="erpApp">
+    <div class="page-header">
+      <div>
+        <div class="breadcrumb-erp"><b>Módulos</b> / Comercio Exterior</div>
+        <h1>Declaraciones de exportación</h1>
+      </div>
+      <div class="filtros-bar">
+        <button type="button" id="btnNuevaDeclaracion" class="btn btn-erp-primary btn-sm">
+          <i class="bi bi-plus-lg me-1"></i>Nueva declaración
+        </button>
+      </div>
+    </div>
+
+    <div id="estadoError" class="alert alert-danger" style="display:none"></div>
+
+    <div class="erp-card">
+      <div class="card-header-erp"><i class="bi bi-globe2 me-1"></i>Declaraciones de exportación</div>
+      <div class="card-body-erp pb-0">
+        <div class="filtros-bar">
+          <div class="filtro-item">
+            <label class="form-label-erp" for="inputBuscarDeclaraciones">Buscar</label>
+            <input type="text" id="inputBuscarDeclaraciones" class="form-control form-control-sm" placeholder="N.º, DUA, cliente, país u observaciones…" style="min-width: 260px;" />
+          </div>
+          <div class="filtro-item">
+            <label class="form-label-erp" for="selectEstado">Estado</label>
+            <select id="selectEstado" class="form-select form-select-sm">
+              <option value="">Todos</option>
+              <option value="BORRADOR">Borrador</option>
+              <option value="CONFIRMADA">Confirmada</option>
+              <option value="EMBARCADA">Embarcada</option>
+              <option value="CANCELADA">Cancelada</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="table-responsive-erp">
+        <table class="table-erp">
+          <thead>
+            <tr>
+              <th>N.º</th><th>DUA</th><th>Cliente</th><th>País destino</th>
+              <th>Incoterm</th><th>Estado</th><th>Moneda</th><th>Creada</th><th class="text-end">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyDeclaraciones"><tr><td colspan="9" class="text-muted-erp">Cargando…</td></tr></tbody>
+        </table>
+      </div>
+      <div class="card-body-erp d-flex flex-wrap align-items-center justify-content-between gap-2 border-top">
+        <div class="d-flex align-items-center gap-2">
+          <span class="text-muted-erp" id="paginacionResumenDeclaraciones">&nbsp;</span>
+          <select id="selectTamanioPaginaDeclaraciones" class="form-select form-select-sm" style="width:auto;">
+            <option value="10">10 / página</option>
+            <option value="25">25 / página</option>
+            <option value="50">50 / página</option>
+            <option value="9999">Todos</option>
+          </select>
+        </div>
+        <nav aria-label="Paginación de declaraciones de exportación">
+          <ul class="pagination pagination-sm mb-0" id="paginacionControlesDeclaraciones"></ul>
+        </nav>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Nueva declaración -->
+  <div class="modal fade" id="modalNuevaDeclaracion" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <form id="formNuevaDeclaracion">
+          <div class="modal-header">
+            <h5 class="modal-title">Nueva declaración de exportación</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div id="modalNuevaDeclaracionError" class="alert alert-danger" style="display:none"></div>
+
+            <div class="row g-2 mb-2">
+              <div class="col-8">
+                <label class="form-label-erp" for="declCliente">Cliente</label>
+                <input type="text" id="declCliente" class="form-control form-control-sm" maxlength="200" required />
+              </div>
+              <div class="col-4">
+                <label class="form-label-erp" for="declNumeroDua">N.º DUA (opcional)</label>
+                <input type="text" id="declNumeroDua" class="form-control form-control-sm" maxlength="30" />
+              </div>
+            </div>
+            <div class="row g-2 mb-2">
+              <div class="col-5">
+                <label class="form-label-erp" for="declPaisDestino">País destino</label>
+                <input type="text" id="declPaisDestino" class="form-control form-control-sm" maxlength="80" required />
+              </div>
+              <div class="col-4">
+                <label class="form-label-erp" for="declIncoterm">Incoterm</label>
+                <select id="declIncoterm" class="form-select form-select-sm">
+                  <option value="EXW">EXW</option>
+                  <option value="FOB" selected>FOB</option>
+                  <option value="CIF">CIF</option>
+                  <option value="CFR">CFR</option>
+                  <option value="FCA">FCA</option>
+                  <option value="DAP">DAP</option>
+                  <option value="DDP">DDP</option>
+                </select>
+              </div>
+              <div class="col-3">
+                <label class="form-label-erp" for="declMoneda">Moneda</label>
+                <select id="declMoneda" class="form-select form-select-sm">
+                  <option value="USD" selected>USD</option>
+                  <option value="PEN">PEN</option>
+                  <option value="EUR">EUR</option>
+                </select>
+              </div>
+            </div>
+            <div class="mb-2">
+              <label class="form-label-erp" for="declObservaciones">Observaciones (opcional)</label>
+              <textarea id="declObservaciones" class="form-control form-control-sm" rows="2" maxlength="500"></textarea>
+            </div>
+
+            <div class="mb-2">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <label class="form-label-erp mb-0">Ítems</label>
+                <button type="button" id="btnAgregarItemDecl" class="btn btn-outline-secondary btn-sm">
+                  <i class="bi bi-plus-lg me-1"></i>Agregar ítem
+                </button>
+              </div>
+              <div class="table-responsive-erp">
+                <table class="table-erp">
+                  <thead>
+                    <tr>
+                      <th>Producto</th><th style="width:120px;">Cantidad</th>
+                      <th style="width:150px;">Precio exp. unit.</th><th style="width:110px;" class="text-end">Subtotal</th>
+                      <th style="width:40px;"></th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbodyItemsDecl"></tbody>
+                  <tfoot>
+                    <tr>
+                      <td colspan="3" class="text-end fw-bold">Total</td>
+                      <td class="text-end fw-bold" id="totalDecl">0.00</td>
+                      <td></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-erp-primary btn-sm">Crear declaración</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Detalle de declaración -->
+  <div class="modal fade" id="modalDetalleDeclaracion" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="detalleDeclaracionTitulo">Declaración de exportación</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div id="modalDetalleDeclaracionError" class="alert alert-danger" style="display:none"></div>
+          <div class="row g-2 mb-3" id="detalleDeclaracionInfo"></div>
+
+          <div class="table-responsive-erp mb-3">
+            <table class="table-erp">
+              <thead>
+                <tr>
+                  <th>Producto</th><th class="text-end">Cantidad</th>
+                  <th class="text-end">Precio exp. unit.</th><th class="text-end">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyDetalleItemsDecl"></tbody>
+            </table>
+          </div>
+
+          <div class="card-header-erp mb-1"><i class="bi bi-clock-history me-1"></i>Historial de estados</div>
+          <div id="historialEstadosDecl"></div>
+          <div class="text-muted-erp nota-contrato mt-1">
+            Esta declaración no se puede editar directamente: solo se puede avanzar de estado con los botones
+            de abajo (Confirmar / Embarcar / Cancelar). Esta pantalla no incluye datos de aduana, país de
+            origen ni documentos adjuntos.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="btnCancelarDeclaracion" class="btn btn-outline-danger btn-sm">
+            <i class="bi bi-x-lg me-1"></i>Cancelar
+          </button>
+          <button type="button" id="btnConfirmarDeclaracion" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-check-lg me-1"></i>Confirmar
+          </button>
+          <button type="button" id="btnEmbarcarDeclaracion" class="btn btn-erp-primary btn-sm">
+            <i class="bi bi-send me-1"></i>Embarcar
+          </button>
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+  <script src="../../config.js"></script>
+  <script src="../../auth.js"></script>
+  <script src="../../api-client.js"></script>
+  <script src="../../ui-components.js"></script>
+  <script src="../../utils.js"></script>
+  <script src="../../moneda-config.js"></script>
+  <script src="../../layout.js"></script>
+  <script src="comercio_exterior.js"></script>
+</body>
+</html>

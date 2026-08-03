@@ -1,0 +1,200 @@
+<!--
+  components/sidebar.html — Menú lateral de Core ERP (Almacén de Exportación).
+
+  Lo inyecta layout.js (fetch + insertBefore #erpApp) en cada página
+  protegida. Usa únicamente las clases ya definidas en erp.css para el
+  sidebar (erp-sidebar, erp-sidebar-brand, logo-box, brand-text, erp-nav,
+  nav-section, nav-link, erp-sidebar-footer): no agrega estilos nuevos.
+
+  Los enlaces usan el token "__ROOT__", que layout.js reemplaza por la
+  ruta relativa correcta según la profundidad de la página actual
+  (window.ERP_BASE_PATH, definido en config.js). "dashboard.html" vive
+  en la raíz del Frontend; el resto de módulos vive en
+  "pages/<modulo>/index.html" (dos niveles bajo la raíz), tal como
+  espera paginaActual() en layout.js.
+
+  Cada nav-link trae data-page="<modulo>" para que layout.js
+  (marcarLinkActivo) le agregue la clase "active" cuando corresponde.
+  No agrega módulos ni rutas que el Backend no tenga: cada entrada de
+  este menú corresponde a un módulo con router y page-script reales.
+  Fase 3 entregó balanced_scorecard, lean_six_sigma,
+  theory_of_constraints, reportes y configuración (m20). Fase 4A agregó
+  Dashboard (m01), Productos (m02) e Inventario (m03). Fase 4B agregó el
+  ciclo de Compras: Proveedores (m05) y Compras (m04). Fase 4D agregó
+  Comercio Exterior (m06) y Operación Logística (m07). Fase 4E agregó
+  Soporte Financiero: Costos (m08) y Moneda (m09). Fase 4F agregó
+  Inteligencia Comercial (m13) e Inteligencia Tributaria (m14).
+
+  AUDITORÍA (esta versión): el sidebar.html vigente traía Operación
+  Logística e Inteligencia (m13/m14), pero le faltaban los enlaces de
+  Costos (m08), Moneda (m09), y de todo el ciclo de Ventas: Clientes
+  (m11), Ventas (m10) y SUNAT (m12). Se confirmaron en el Backend real
+  los prefijos /api/ventas, /api/clientes y /api/sunat, y se asumió la
+  convención ya usada en el resto del menú de que cada módulo vive en
+  pages/<nombre_sin_prefijo_mXX>/index.html (p. ej.
+  pages/clientes/index.html). Se agregaron esas 5 entradas faltantes;
+  no se tocó ningún otro enlace, sección, atributo ni el resto de la
+  estructura del archivo.
+
+  FASE 1 — m21_importacion_datos: se agregó la sección "Datos" con el
+  enlace a pages/importacion_datos/index.html (prefijo real confirmado
+  en el Backend: /api/importacion-datos). No se modificó ningún otro
+  enlace existente.
+
+  FASE 4B — m23_dashboard_inventario: se agregó, dentro de la sección
+  "Operación" y justo después de Inventario, el enlace a
+  pages/dashboard_inventario/index.html (Dashboard Gerencial de
+  Inventario, consume GET /api/dashboard-inventario/resumen). No se
+  modificó ningún otro enlace, sección ni el resto de la estructura
+  del archivo.
+
+  FASE 4D — m24_reportes_gerenciales_inventario: se agregó, dentro de
+  la sección "Operación" y justo después de Dashboard Gerencial
+  Inventario, el enlace a pages/reportes_gerenciales_inventario/index.html
+  (Reportes Gerenciales de Inventario, consume los 4 GET bajo
+  /api/reportes-gerenciales-inventario/). No se modificó ningún otro
+  enlace, sección ni el resto de la estructura del archivo.
+
+  FASE 4E — Dashboard Ejecutivo Consolidado (solo Frontend, no agrega
+  módulo de Backend): se agregó, dentro de la sección "Operación" y
+  justo después de Reportes Gerenciales Inventario, el enlace a
+  pages/dashboard_ejecutivo/index.html. Esa pantalla consolida
+  /api/dashboard-inventario/resumen (m23) y los 4 GET de
+  /api/reportes-gerenciales-inventario/ (m24) en un solo tablero
+  gerencial; no se modificó ningún otro enlace, sección ni el resto de
+  la estructura del archivo.
+-->
+<aside class="erp-sidebar" id="sidebar">
+  <div class="erp-sidebar-brand">
+    <div class="logo-box">EA</div>
+    <div class="brand-text">
+      <div class="fw-bold" style="font-size: 14px; line-height: 1.2;">Core ERP</div>
+      <small>Almacén de Exportación</small>
+    </div>
+  </div>
+
+  <nav class="erp-nav">
+    <div class="nav-section">Principal</div>
+    <a class="nav-link" href="__ROOT__dashboard.html" data-page="dashboard">
+      <i class="bi bi-speedometer2"></i>
+      <span>Dashboard</span>
+    </a>
+
+    <div class="nav-section">Datos</div>
+    <a class="nav-link" href="__ROOT__pages/importacion_datos/index.html" data-page="importacion_datos">
+      <i class="bi bi-file-earmark-arrow-up"></i>
+      <span>Importación de Datos</span>
+    </a>
+
+    <div class="nav-section">Operación</div>
+    <a class="nav-link" href="__ROOT__pages/productos/index.html" data-page="productos">
+      <i class="bi bi-box-seam"></i>
+      <span>Productos</span>
+    </a>
+    <a class="nav-link" href="__ROOT__pages/inventario/index.html" data-page="inventario">
+      <i class="bi bi-boxes"></i>
+      <span>Inventario</span>
+    </a>
+    <a class="nav-link" href="__ROOT__pages/dashboard_inventario/index.html" data-page="dashboard_inventario">
+      <i class="bi bi-speedometer"></i>
+      <span>Dashboard Gerencial Inventario</span>
+    </a>
+    <a class="nav-link" href="__ROOT__pages/reportes_gerenciales_inventario/index.html" data-page="reportes_gerenciales_inventario">
+      <i class="bi bi-clipboard2-data"></i>
+      <span>Reportes Gerenciales Inventario</span>
+    </a>
+    <a class="nav-link" href="__ROOT__pages/dashboard_ejecutivo/index.html" data-page="dashboard_ejecutivo">
+      <i class="bi bi-graph-up-arrow"></i>
+      <span>Dashboard Ejecutivo Consolidado</span>
+    </a>
+
+    <div class="nav-section">Compras</div>
+    <a class="nav-link" href="__ROOT__pages/proveedores/index.html" data-page="proveedores">
+      <i class="bi bi-truck"></i>
+      <span>Proveedores</span>
+    </a>
+    <a class="nav-link" href="__ROOT__pages/compras/index.html" data-page="compras">
+      <i class="bi bi-cart-check"></i>
+      <span>Compras</span>
+    </a>
+
+    <div class="nav-section">Comercio Exterior y Logística</div>
+    <a class="nav-link" href="__ROOT__pages/comercio_exterior/index.html" data-page="comercio_exterior">
+      <i class="bi bi-globe2"></i>
+      <span>Comercio Exterior</span>
+    </a>
+    <a class="nav-link" href="__ROOT__pages/operacion_logistica/index.html" data-page="operacion_logistica">
+      <i class="bi bi-signpost-split"></i>
+      <span>Operación Logística</span>
+    </a>
+    <a class="nav-link" href="__ROOT__pages/guias_remision/index.html" data-page="guias_remision">
+      <i class="bi bi-file-earmark-text"></i>
+      <span>Guías de Remisión</span>
+    </a>
+
+    <div class="nav-section">Soporte Financiero</div>
+    <a class="nav-link" href="__ROOT__pages/costos/index.html" data-page="costos">
+      <i class="bi bi-cash-coin"></i>
+      <span>Costos</span>
+    </a>
+    <a class="nav-link" href="__ROOT__pages/moneda/index.html" data-page="moneda">
+      <i class="bi bi-currency-exchange"></i>
+      <span>Moneda</span>
+    </a>
+
+    <div class="nav-section">Ventas</div>
+    <a class="nav-link" href="__ROOT__pages/clientes/index.html" data-page="clientes">
+      <i class="bi bi-people"></i>
+      <span>Clientes</span>
+    </a>
+    <a class="nav-link" href="__ROOT__pages/ventas/index.html" data-page="ventas">
+      <i class="bi bi-cart3"></i>
+      <span>Ventas</span>
+    </a>
+    <a class="nav-link" href="__ROOT__pages/sunat/index.html" data-page="sunat">
+      <i class="bi bi-bank"></i>
+      <span>SUNAT</span>
+    </a>
+
+    <div class="nav-section">Inteligencia</div>
+    <a class="nav-link" href="__ROOT__pages/inteligencia_comercial/index.html" data-page="inteligencia_comercial">
+      <i class="bi bi-graph-up-arrow"></i>
+      <span>Inteligencia Comercial</span>
+    </a>
+    <a class="nav-link" href="__ROOT__pages/inteligencia_tributaria/index.html" data-page="inteligencia_tributaria">
+      <i class="bi bi-receipt-cutoff"></i>
+      <span>Inteligencia Tributaria</span>
+    </a>
+
+    <div class="nav-section">Módulos de mejora continua</div>
+    <a class="nav-link" href="__ROOT__pages/balanced_scorecard/index.html" data-page="balanced_scorecard">
+      <i class="bi bi-clipboard-data"></i>
+      <span>Balanced Scorecard</span>
+    </a>
+    <a class="nav-link" href="__ROOT__pages/lean_six_sigma/index.html" data-page="lean_six_sigma">
+      <i class="bi bi-arrow-repeat"></i>
+      <span>Lean Six Sigma</span>
+    </a>
+    <a class="nav-link" href="__ROOT__pages/theory_of_constraints/index.html" data-page="theory_of_constraints">
+      <i class="bi bi-hourglass-split"></i>
+      <span>Theory of Constraints</span>
+    </a>
+    <a class="nav-link" href="__ROOT__pages/reportes/index.html" data-page="reportes">
+      <i class="bi bi-bar-chart-line"></i>
+      <span>Reportes</span>
+    </a>
+
+    <div class="nav-section">Sistema</div>
+    <a class="nav-link" href="__ROOT__pages/configuracion/index.html" data-page="configuracion">
+      <i class="bi bi-gear"></i>
+      <span>Configuración</span>
+    </a>
+  </nav>
+
+  <div class="erp-sidebar-footer">
+    <a href="#">
+      <i class="bi bi-question-circle"></i>
+      <span>Ayuda y soporte</span>
+    </a>
+  </div>
+</aside>

@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Inventario — Core ERP Almacén de Exportación</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" />
+  <link rel="stylesheet" href="../../erp.css" />
+
+  <style>
+    .nav-tabs-erp { border-bottom: 1px solid var(--erp-border); margin-bottom: 0; }
+    .nav-tabs-erp .nav-link {
+      color: var(--erp-text-muted); font-weight: 600; font-size: 13px; border: none;
+      border-bottom: 2px solid transparent; border-radius: 0;
+    }
+    .nav-tabs-erp .nav-link.active { color: var(--erp-primary); border-bottom-color: var(--erp-primary); background: transparent; }
+    .nota-contrato { font-size: 11.5px; }
+    /* FASE FRONTEND INVENTARIO — mismas reglas .kpi-card/.kpi-label/.kpi-value
+       ya usadas tal cual en dashboard.html y pages/reportes/index.html
+       (copiadas, no reinventadas), para que las tarjetas KPI de esta
+       pantalla se vean idénticas a las del Dashboard. */
+    .kpi-card { padding: 16px; }
+    .kpi-label {
+      font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em;
+      color: var(--erp-text-muted); font-weight: 700;
+    }
+    .kpi-value { font-size: clamp(16px, 1.6vw, 24px); font-weight: 800; margin-top: 6px; line-height: 1.2; word-break: break-word; overflow-wrap: anywhere; }
+    .badge-count {
+      font-size: 11px; font-weight: 700; color: var(--erp-text-muted);
+      background: rgba(0,0,0,.05); border-radius: 10px; padding: 1px 8px; vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+  <div id="erpApp">
+    <div class="page-header">
+      <div>
+        <div class="breadcrumb-erp"><b>Módulos</b> / Inventario</div>
+        <h1>Inventario</h1>
+        <div class="filtros-bar mt-1">
+          <div class="filtro-item">
+            <label class="form-label-erp" for="selectInventarioActivo">Almacén / Inventario</label>
+            <select id="selectInventarioActivo" class="form-select form-select-sm" style="min-width:240px;">
+              <option value="">Cargando…</option>
+            </select>
+          </div>
+          <button type="button" id="btnNuevoInventario" class="btn btn-outline-secondary btn-sm align-self-end">
+            <i class="bi bi-plus-lg me-1"></i>Nuevo Inventario
+          </button>
+        </div>
+        <div class="text-muted-erp" id="infoAlmacen">Cargando almacén…</div>
+      </div>
+      <div class="filtros-bar">
+        <button type="button" id="btnNuevoIngreso" class="btn btn-erp-primary btn-sm">
+          <i class="bi bi-box-arrow-in-down me-1"></i>Nuevo ingreso
+        </button>
+        <button type="button" id="btnNuevaSalida" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-box-arrow-up me-1"></i>Registrar salida
+        </button>
+        <button type="button" id="btnNuevoAjuste" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-sliders me-1"></i>Ajuste
+        </button>
+      </div>
+    </div>
+
+    <div id="estadoError" class="alert alert-danger" style="display:none"></div>
+
+    <!-- KPIs — mismo diseño (.kpi-card/.kpi-label/.kpi-value) del Dashboard.
+         3 primeras: GET /api/dashboard/resumen (mismo endpoint y mismos
+         campos que dashboard.js pinta en kpiProductosActivos/
+         kpiValorInventario/kpiBajoStock; son de alcance global, no filtran
+         por el Inventario activo del selector — mismo caveat ya documentado
+         para /api/reportes/inventario-valorizado más abajo).
+         4 últimas: GET /api/inteligencia-inventario/{inventario_id} (Fase 3),
+         SÍ filtradas por el Inventario activo; Rotación/Días/Consumo son un
+         promedio simple en el cliente sobre los valores por producto que ya
+         entrega el Backend (no se recalcula la fórmula, solo se promedia). -->
+    <div class="row g-3 mb-3">
+      <div class="col-6 col-lg-3">
+        <div class="erp-card kpi-card">
+          <div class="kpi-label">Productos activos</div>
+          <div class="kpi-value" id="kpiProductosActivos">—</div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="erp-card kpi-card">
+          <div class="kpi-label">Valor inventario</div>
+          <div class="kpi-value" id="kpiValorInventario">—</div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="erp-card kpi-card">
+          <div class="kpi-label">Bajo stock</div>
+          <div class="kpi-value" id="kpiBajoStock">—</div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="erp-card kpi-card">
+          <div class="kpi-label">Rotación promedio</div>
+          <div class="kpi-value" id="kpiRotacionPromedio">—</div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="erp-card kpi-card">
+          <div class="kpi-label">Días de inventario</div>
+          <div class="kpi-value" id="kpiDiasInventario">—</div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="erp-card kpi-card">
+          <div class="kpi-label">Consumo promedio (diario)</div>
+          <div class="kpi-value" id="kpiConsumoPromedio">—</div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="erp-card kpi-card">
+          <div class="kpi-label">Riesgo de merma (alto/crítico)</div>
+          <div class="kpi-value" id="kpiRiesgoMerma">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="erp-card">
+      <ul class="nav nav-tabs-erp px-2 pt-2" role="tablist">
+        <li class="nav-item">
+          <button class="nav-link active" id="tabBtnSaldos" data-bs-toggle="tab" data-bs-target="#tabSaldos" type="button">
+            <i class="bi bi-boxes me-1"></i>Saldos
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" id="tabBtnAlertas" data-bs-toggle="tab" data-bs-target="#tabAlertas" type="button">
+            <i class="bi bi-exclamation-triangle me-1"></i>Alertas <span class="badge text-bg-danger" id="badgeAlertas" style="display:none">0</span>
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" id="tabBtnKardex" data-bs-toggle="tab" data-bs-target="#tabKardex" type="button">
+            <i class="bi bi-clock-history me-1"></i>Kardex por producto
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" id="tabBtnMovimientos" data-bs-toggle="tab" data-bs-target="#tabMovimientos" type="button">
+            <i class="bi bi-arrow-left-right me-1"></i>Movimientos
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" id="tabBtnLotes" data-bs-toggle="tab" data-bs-target="#tabLotes" type="button">
+            <i class="bi bi-upc-scan me-1"></i>Lotes
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" id="tabBtnProximosVencer" data-bs-toggle="tab" data-bs-target="#tabProximosVencer" type="button">
+            <i class="bi bi-hourglass-split me-1"></i>Próximos a vencer <span class="badge text-bg-warning" id="badgeProximosVencer" style="display:none">0</span>
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" id="tabBtnInteligencia" data-bs-toggle="tab" data-bs-target="#tabInteligencia" type="button">
+            <i class="bi bi-graph-up-arrow me-1"></i>Inteligencia de inventario
+          </button>
+        </li>
+      </ul>
+
+      <div class="tab-content">
+        <!-- Saldos -->
+        <div class="tab-pane fade show active" id="tabSaldos">
+          <div class="card-body-erp pb-0">
+            <div class="filtros-bar">
+              <div class="filtro-item">
+                <label class="form-label-erp" for="inputBuscarSaldos">Buscar</label>
+                <input type="text" id="inputBuscarSaldos" class="form-control form-control-sm" placeholder="Código o nombre…" style="min-width: 220px;" />
+              </div>
+              <div class="filtro-item">
+                <label class="form-label-erp" for="selectEstadoSaldos">Estado</label>
+                <select id="selectEstadoSaldos" class="form-select form-select-sm" style="width:auto;">
+                  <option value="todos">Todos</option>
+                  <option value="ok">OK</option>
+                  <option value="bajo">Bajo mínimo</option>
+                </select>
+              </div>
+            </div>
+            <div class="text-muted-erp nota-contrato">
+              "Disponible" equivale al stock total (no distingue stock reservado). El Costo Unitario y el
+              Costo Total provienen del mismo reporte de inventario valorizado que usan Productos y
+              Reportes; si un producto tiene lotes en más de un Inventario, el Costo Total mostrado aquí
+              suma todos los Inventarios (no solo el activo). Si el producto no tiene lotes/movimientos
+              todavía, ambas columnas muestran "—".
+            </div>
+          </div>
+          <div class="table-responsive-erp">
+            <table class="table-erp">
+              <thead>
+                <tr>
+                  <th>Código</th><th>Producto</th><th class="text-end">Stock total</th>
+                  <th class="text-end">Disponible</th><th class="text-end">Stock mínimo</th>
+                  <th class="text-end">Costo Unitario</th><th class="text-end">Costo Total</th>
+                  <th>Semáforo</th><th>Estado</th><th class="text-end">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="tbodySaldos"><tr><td colspan="10" class="text-muted-erp">Cargando…</td></tr></tbody>
+            </table>
+          </div>
+          <div class="card-body-erp d-flex flex-wrap align-items-center justify-content-between gap-2 border-top">
+            <div class="d-flex align-items-center gap-2">
+              <span class="text-muted-erp" id="paginacionResumenSaldos">&nbsp;</span>
+              <select id="selectTamanioPaginaSaldos" class="form-select form-select-sm" style="width:auto;">
+                <option value="10">10 / página</option>
+                <option value="25">25 / página</option>
+                <option value="50">50 / página</option>
+                <option value="9999">Todos</option>
+              </select>
+            </div>
+            <nav aria-label="Paginación de saldos">
+              <ul class="pagination pagination-sm mb-0" id="paginacionControlesSaldos"></ul>
+            </nav>
+          </div>
+        </div>
+
+        <!-- Alertas -->
+        <div class="tab-pane fade" id="tabAlertas">
+          <div class="card-body-erp pb-0">
+            <div class="text-muted-erp">Productos cuyo stock total está por debajo del stock mínimo configurado, y productos con stock pero sin stock mínimo definido en su ficha (no se puede evaluar si están bajos).</div>
+            <div class="filtros-bar mt-2">
+              <div class="filtro-item">
+                <label class="form-label-erp" for="inputBuscarAlertas">Buscar</label>
+                <input type="text" id="inputBuscarAlertas" class="form-control form-control-sm" placeholder="Código o nombre…" style="min-width: 220px;" />
+              </div>
+            </div>
+          </div>
+          <div class="table-responsive-erp">
+            <table class="table-erp">
+              <thead>
+                <tr>
+                  <th>Código</th><th>Producto</th><th class="text-end">Stock total</th>
+                  <th class="text-end">Disponible</th><th class="text-end">Stock mínimo</th>
+                  <th class="text-end">Costo Unitario</th><th class="text-end">Costo Total</th>
+                  <th>Semáforo</th><th>Estado</th><th class="text-end">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyAlertas"><tr><td colspan="10" class="text-muted-erp">Cargando…</td></tr></tbody>
+            </table>
+          </div>
+          <div class="card-body-erp d-flex flex-wrap align-items-center justify-content-between gap-2 border-top">
+            <div class="d-flex align-items-center gap-2">
+              <span class="text-muted-erp" id="paginacionResumenAlertas">&nbsp;</span>
+              <select id="selectTamanioPaginaAlertas" class="form-select form-select-sm" style="width:auto;">
+                <option value="10">10 / página</option>
+                <option value="25">25 / página</option>
+                <option value="50">50 / página</option>
+                <option value="9999">Todos</option>
+              </select>
+            </div>
+            <nav aria-label="Paginación de alertas">
+              <ul class="pagination pagination-sm mb-0" id="paginacionControlesAlertas"></ul>
+            </nav>
+          </div>
+        </div>
+
+        <!-- Kardex -->
+        <div class="tab-pane fade" id="tabKardex">
+          <div class="card-body-erp pb-0">
+            <div class="filtros-bar">
+              <div class="filtro-item">
+                <label class="form-label-erp" for="selectProductoKardex">Producto</label>
+                <select id="selectProductoKardex" class="form-select form-select-sm select-producto" style="max-width: 420px;">
+                  <option value="">Seleccionar…</option>
+                </select>
+              </div>
+              <div class="filtro-item">
+                <label class="form-label-erp" for="selectTipoMovimientoKardex">Tipo de movimiento</label>
+                <select id="selectTipoMovimientoKardex" class="form-select form-select-sm" style="width:auto;">
+                  <option value="todos">Todos</option>
+                  <option value="INGRESO">Ingreso</option>
+                  <option value="SALIDA">Salida</option>
+                  <option value="AJUSTE_POSITIVO">Ajuste positivo</option>
+                  <option value="AJUSTE_NEGATIVO">Ajuste negativo</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="table-responsive-erp">
+            <table class="table-erp">
+              <thead>
+                <tr>
+                  <th>Fecha</th><th>Tipo</th><th class="text-end">Cantidad</th>
+                  <th class="text-end">Costo unit.</th><th class="text-end">Saldo resultante</th>
+                  <th>Lote</th><th>Referencia</th><th class="text-end">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyKardex"><tr><td colspan="8" class="text-muted-erp">Selecciona un producto para ver su kardex.</td></tr></tbody>
+            </table>
+          </div>
+          <div class="card-body-erp d-flex flex-wrap align-items-center justify-content-between gap-2 border-top">
+            <div class="d-flex align-items-center gap-2">
+              <span class="text-muted-erp" id="paginacionResumenKardex">&nbsp;</span>
+              <select id="selectTamanioPaginaKardex" class="form-select form-select-sm" style="width:auto;">
+                <option value="10">10 / página</option>
+                <option value="25">25 / página</option>
+                <option value="50">50 / página</option>
+                <option value="9999">Todos</option>
+              </select>
+            </div>
+            <nav aria-label="Paginación de kardex">
+              <ul class="pagination pagination-sm mb-0" id="paginacionControlesKardex"></ul>
+            </nav>
+          </div>
+          <div class="card-body-erp text-muted-erp" id="resumenKardex"></div>
+        </div>
+
+        <!-- Movimientos (todos los productos) -->
+        <div class="tab-pane fade" id="tabMovimientos">
+          <div class="card-body-erp pb-0">
+            <div class="text-muted-erp nota-contrato">
+              Vista consolidada de los movimientos de todos los productos con stock.
+            </div>
+            <div class="filtros-bar mt-2">
+              <div class="filtro-item">
+                <label class="form-label-erp" for="inputBuscarMovimientos">Buscar</label>
+                <input type="text" id="inputBuscarMovimientos" class="form-control form-control-sm" placeholder="Código, nombre o N.º de lote…" style="min-width: 220px;" />
+              </div>
+              <div class="filtro-item">
+                <label class="form-label-erp" for="selectTipoMovimientoGlobal">Tipo de movimiento</label>
+                <select id="selectTipoMovimientoGlobal" class="form-select form-select-sm" style="width:auto;">
+                  <option value="todos">Todos</option>
+                  <option value="INGRESO">Ingreso</option>
+                  <option value="SALIDA">Salida</option>
+                  <option value="AJUSTE_POSITIVO">Ajuste positivo</option>
+                  <option value="AJUSTE_NEGATIVO">Ajuste negativo</option>
+                </select>
+              </div>
+              <button type="button" id="btnActualizarMovimientos" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-clockwise me-1"></i>Actualizar
+              </button>
+            </div>
+          </div>
+          <div class="table-responsive-erp">
+            <table class="table-erp">
+              <thead>
+                <tr>
+                  <th>Fecha</th><th>Producto</th><th>Tipo</th><th class="text-end">Cantidad</th>
+                  <th class="text-end">Costo unit.</th><th class="text-end">Saldo resultante</th>
+                  <th>Lote</th><th>Referencia</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyMovimientos"><tr><td colspan="8" class="text-muted-erp">Abre esta pestaña para cargar los movimientos.</td></tr></tbody>
+            </table>
+          </div>
+          <div class="card-body-erp d-flex flex-wrap align-items-center justify-content-between gap-2 border-top">
+            <div class="d-flex align-items-center gap-2">
+              <span class="text-muted-erp" id="paginacionResumenMovimientos">&nbsp;</span>
+              <select id="selectTamanioPaginaMovimientos" class="form-select form-select-sm" style="width:auto;">
+                <option value="10">10 / página</option>
+                <option value="25">25 / página</option>
+                <option value="50">50 / página</option>
+                <option value="9999">Todos</option>
+              </select>
+            </div>
+            <nav aria-label="Paginación de movimientos">
+              <ul class="pagination pagination-sm mb-0" id="paginacionControlesMovimientos"></ul>
+            </nav>
+          </div>
+        </div>
+
+        <!-- Lotes — GET /api/reportes/inventario-por-lote (m19_reportes, ya existente) -->
+        <div class="tab-pane fade" id="tabLotes">
+          <div class="card-body-erp pb-0">
+            <div class="text-muted-erp nota-contrato">
+              Un lote por fila, con su costo, valor y semáforo de vencimiento, tal como los entrega
+              el reporte de inventario por lote. Filtrado por el Inventario activo del selector.
+            </div>
+            <div class="filtros-bar mt-2">
+              <div class="filtro-item">
+                <label class="form-label-erp" for="inputBuscarLotes">Buscar</label>
+                <input type="text" id="inputBuscarLotes" class="form-control form-control-sm" placeholder="Código, producto o N.º de lote…" style="min-width: 220px;" />
+              </div>
+              <button type="button" id="btnActualizarLotes" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-clockwise me-1"></i>Actualizar
+              </button>
+              <button type="button" id="btnExportarLotesExcel" class="btn btn-outline-secondary btn-sm ms-auto">
+                <i class="bi bi-file-earmark-excel me-1"></i>Excel
+              </button>
+              <button type="button" id="btnExportarLotesPdf" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+              </button>
+            </div>
+          </div>
+          <div class="card-body-erp text-muted-erp" id="resumenLotes"></div>
+          <div class="table-responsive-erp">
+            <table class="table-erp">
+              <thead>
+                <tr>
+                  <th>Producto</th><th>Código</th><th>Lote</th>
+                  <th>Fecha ingreso</th><th>Fecha elaboración</th><th>Fecha vencimiento</th>
+                  <th class="text-end">Cantidad</th><th class="text-end">Costo unitario</th>
+                  <th class="text-end">Valor lote</th><th>Estado</th><th>Semáforo</th><th>Proveedor</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyLotes"><tr><td colspan="12" class="text-muted-erp">Abre esta pestaña para cargar los lotes.</td></tr></tbody>
+            </table>
+          </div>
+          <div class="card-body-erp d-flex flex-wrap align-items-center justify-content-between gap-2 border-top">
+            <div class="d-flex align-items-center gap-2">
+              <span class="text-muted-erp" id="paginacionResumenLotes">&nbsp;</span>
+              <select id="selectTamanioPaginaLotes" class="form-select form-select-sm" style="width:auto;">
+                <option value="10">10 / página</option>
+                <option value="25">25 / página</option>
+                <option value="50">50 / página</option>
+                <option value="9999">Todos</option>
+              </select>
+            </div>
+            <nav aria-label="Paginación de lotes">
+              <ul class="pagination pagination-sm mb-0" id="paginacionControlesLotes"></ul>
+            </nav>
+          </div>
+        </div>
+
+        <!-- Próximos a vencer — GET /api/reportes/proximos-vencer (m19_reportes, ya existente) -->
+        <div class="tab-pane fade" id="tabProximosVencer">
+          <div class="card-body-erp pb-0">
+            <div class="text-muted-erp nota-contrato">
+              Lotes agrupados por categoría (activos / próximos a vencer / vencidos) tal como los
+              entrega el reporte. Filtrado por el Inventario activo del selector.
+            </div>
+            <div class="filtros-bar mt-2">
+              <div class="filtro-item">
+                <label class="form-label-erp" for="inputBuscarProximosVencer">Buscar</label>
+                <input type="text" id="inputBuscarProximosVencer" class="form-control form-control-sm" placeholder="Código, producto o N.º de lote…" style="min-width: 220px;" />
+              </div>
+              <div class="filtro-item">
+                <label class="form-label-erp" for="selectCategoriaProximosVencer">Categoría</label>
+                <select id="selectCategoriaProximosVencer" class="form-select form-select-sm" style="width:auto;">
+                  <option value="todos">Todas</option>
+                  <option value="ACTIVOS">Activos</option>
+                  <option value="PROXIMOS_A_VENCER">Próximos a vencer</option>
+                  <option value="VENCIDOS">Vencidos</option>
+                </select>
+              </div>
+              <button type="button" id="btnActualizarProximosVencer" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-clockwise me-1"></i>Actualizar
+              </button>
+              <button type="button" id="btnExportarProximosVencerExcel" class="btn btn-outline-secondary btn-sm ms-auto">
+                <i class="bi bi-file-earmark-excel me-1"></i>Excel
+              </button>
+              <button type="button" id="btnExportarProximosVencerPdf" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+              </button>
+            </div>
+          </div>
+          <div class="card-body-erp text-muted-erp" id="resumenProximosVencer"></div>
+          <div class="table-responsive-erp">
+            <table class="table-erp">
+              <thead>
+                <tr>
+                  <th>Producto</th><th>Lote</th><th>Fecha vencimiento</th>
+                  <th class="text-end">Días restantes</th><th class="text-end">Cantidad</th>
+                  <th class="text-end">Valor comprometido</th><th>Estado</th><th>Semáforo</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyProximosVencer"><tr><td colspan="8" class="text-muted-erp">Abre esta pestaña para cargar los próximos a vencer.</td></tr></tbody>
+            </table>
+          </div>
+          <div class="card-body-erp d-flex flex-wrap align-items-center justify-content-between gap-2 border-top">
+            <div class="d-flex align-items-center gap-2">
+              <span class="text-muted-erp" id="paginacionResumenProximosVencer">&nbsp;</span>
+              <select id="selectTamanioPaginaProximosVencer" class="form-select form-select-sm" style="width:auto;">
+                <option value="10">10 / página</option>
+                <option value="25">25 / página</option>
+                <option value="50">50 / página</option>
+                <option value="9999">Todos</option>
+              </select>
+            </div>
+            <nav aria-label="Paginación de próximos a vencer">
+              <ul class="pagination pagination-sm mb-0" id="paginacionControlesProximosVencer"></ul>
+            </nav>
+          </div>
+        </div>
+
+        <!-- Inteligencia de inventario (Fase 3) — GET /api/inteligencia-inventario/{inventario_id}, ya existente -->
+        <div class="tab-pane fade" id="tabInteligencia">
+          <div class="card-body-erp pb-0">
+            <div class="text-muted-erp nota-contrato">
+              Rotación, días de inventario, consumo promedio y riesgo de merma por producto, calculados
+              por el Backend (m22_inteligencia_inventario) sobre Kardex/Lotes reales — esta pantalla
+              solo los muestra, no recalcula ninguna fórmula.
+            </div>
+            <div class="filtros-bar mt-2">
+              <div class="filtro-item">
+                <label class="form-label-erp" for="inputBuscarInteligencia">Buscar</label>
+                <input type="text" id="inputBuscarInteligencia" class="form-control form-control-sm" placeholder="Código o nombre…" style="min-width: 220px;" />
+              </div>
+              <div class="filtro-item">
+                <label class="form-label-erp" for="selectDiasAnalisisInteligencia">Días de análisis</label>
+                <input type="number" id="selectDiasAnalisisInteligencia" class="form-control form-control-sm" style="width:90px;" min="1" placeholder="Por defecto" />
+              </div>
+              <button type="button" id="btnActualizarInteligencia" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-clockwise me-1"></i>Actualizar
+              </button>
+            </div>
+          </div>
+          <div class="card-body-erp text-muted-erp" id="resumenInteligencia"></div>
+          <div class="table-responsive-erp">
+            <table class="table-erp">
+              <thead>
+                <tr>
+                  <th>Código</th><th>Producto</th><th class="text-end">Stock actual</th>
+                  <th class="text-end">Rotación</th><th class="text-end">Días de inventario</th>
+                  <th class="text-end">Consumo diario</th><th class="text-end">Consumo semanal</th>
+                  <th class="text-end">Consumo mensual</th><th class="text-end">Días para vencer</th>
+                  <th>Riesgo de merma</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyInteligencia"><tr><td colspan="10" class="text-muted-erp">Abre esta pestaña para cargar los indicadores.</td></tr></tbody>
+            </table>
+          </div>
+          <div class="card-body-erp d-flex flex-wrap align-items-center justify-content-between gap-2 border-top">
+            <div class="d-flex align-items-center gap-2">
+              <span class="text-muted-erp" id="paginacionResumenInteligencia">&nbsp;</span>
+              <select id="selectTamanioPaginaInteligencia" class="form-select form-select-sm" style="width:auto;">
+                <option value="10">10 / página</option>
+                <option value="25">25 / página</option>
+                <option value="50">50 / página</option>
+                <option value="9999">Todos</option>
+              </select>
+            </div>
+            <nav aria-label="Paginación de inteligencia de inventario">
+              <ul class="pagination pagination-sm mb-0" id="paginacionControlesInteligencia"></ul>
+            </nav>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Nuevo ingreso -->
+  <div class="modal fade" id="modalIngreso" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form id="formIngreso">
+          <div class="modal-header">
+            <h5 class="modal-title">Nuevo ingreso de inventario</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div id="modalIngresoError" class="alert alert-danger" style="display:none"></div>
+            <div class="mb-2">
+              <label class="form-label-erp" for="ingresoProducto">Producto</label>
+              <select id="ingresoProducto" class="form-select form-select-sm select-producto" required>
+                <option value="">Seleccionar…</option>
+              </select>
+            </div>
+            <div class="mb-2">
+              <label class="form-label-erp" for="ingresoCodigoLote">Código de lote</label>
+              <input type="text" id="ingresoCodigoLote" class="form-control form-control-sm" maxlength="50" required />
+            </div>
+            <div class="row g-2 mb-2">
+              <div class="col-6">
+                <label class="form-label-erp" for="ingresoCantidad">Cantidad</label>
+                <input type="number" id="ingresoCantidad" class="form-control form-control-sm" min="0.001" step="0.001" required />
+              </div>
+              <div class="col-6">
+                <label class="form-label-erp" for="ingresoCostoUnitario">Costo unitario</label>
+                <input type="number" id="ingresoCostoUnitario" class="form-control form-control-sm" min="0" step="0.0001" required />
+              </div>
+            </div>
+            <div class="mb-2">
+              <label class="form-label-erp" for="ingresoFechaVencimiento">Fecha de vencimiento (opcional)</label>
+              <input type="date" id="ingresoFechaVencimiento" class="form-control form-control-sm" />
+            </div>
+            <div class="mb-2">
+              <label class="form-label-erp" for="ingresoReferencia">Referencia (opcional)</label>
+              <input type="text" id="ingresoReferencia" class="form-control form-control-sm" maxlength="120" />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-erp-primary btn-sm">Registrar ingreso</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Registrar salida -->
+  <div class="modal fade" id="modalSalida" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form id="formSalida">
+          <div class="modal-header">
+            <h5 class="modal-title">Registrar salida de inventario</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div id="modalSalidaError" class="alert alert-danger" style="display:none"></div>
+            <p class="text-muted-erp" style="font-size:12.5px;">
+              La salida consume stock automáticamente vía FEFO (primero el lote con
+              vencimiento más próximo); puede generar más de un movimiento de kardex.
+            </p>
+            <div class="mb-2">
+              <label class="form-label-erp" for="salidaProducto">Producto</label>
+              <select id="salidaProducto" class="form-select form-select-sm select-producto" required>
+                <option value="">Seleccionar…</option>
+              </select>
+            </div>
+            <div class="mb-2">
+              <label class="form-label-erp" for="salidaCantidad">Cantidad</label>
+              <input type="number" id="salidaCantidad" class="form-control form-control-sm" min="0.001" step="0.001" required />
+            </div>
+            <div class="mb-2">
+              <label class="form-label-erp" for="salidaReferencia">Referencia (opcional)</label>
+              <input type="text" id="salidaReferencia" class="form-control form-control-sm" maxlength="120" />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-erp-primary btn-sm">Registrar salida</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Ajuste -->
+  <div class="modal fade" id="modalAjuste" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form id="formAjuste">
+          <div class="modal-header">
+            <h5 class="modal-title">Ajuste de inventario</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div id="modalAjusteError" class="alert alert-danger" style="display:none"></div>
+            <div class="mb-2">
+              <label class="form-label-erp" for="ajusteLoteId">ID de lote</label>
+              <input type="number" id="ajusteLoteId" class="form-control form-control-sm" min="1" required />
+              <div class="text-muted-erp" style="font-size:11.5px;">
+                Se obtiene de la columna "Lote" del kardex o de Movimientos (botón "Ajustar" de cada fila).
+              </div>
+            </div>
+            <div class="mb-2">
+              <label class="form-label-erp" for="ajusteCantidad">Cantidad</label>
+              <input type="number" id="ajusteCantidad" class="form-control form-control-sm" step="0.001" required />
+              <div class="text-muted-erp" style="font-size:11.5px;">
+                Positivo para ajuste a favor, negativo para ajuste en contra.
+              </div>
+            </div>
+            <div class="mb-2">
+              <label class="form-label-erp" for="ajusteReferencia">Referencia (opcional)</label>
+              <input type="text" id="ajusteReferencia" class="form-control form-control-sm" maxlength="120" />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-erp-primary btn-sm">Registrar ajuste</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Nuevo inventario -->
+  <div class="modal fade" id="modalNuevoInventario" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form id="formNuevoInventario">
+          <div class="modal-header">
+            <h5 class="modal-title">Nuevo inventario</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div id="modalNuevoInventarioError" class="alert alert-danger" style="display:none"></div>
+            <div class="mb-2">
+              <label class="form-label-erp" for="nuevoInventarioCodigo">Código</label>
+              <input type="text" id="nuevoInventarioCodigo" class="form-control form-control-sm" maxlength="20" required />
+            </div>
+            <div class="mb-2">
+              <label class="form-label-erp" for="nuevoInventarioNombre">Nombre</label>
+              <input type="text" id="nuevoInventarioNombre" class="form-control form-control-sm" maxlength="150" required />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-erp-primary btn-sm">Crear inventario</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+  <script src="../../config.js"></script>
+  <script src="../../auth.js"></script>
+  <script src="../../api-client.js"></script>
+  <script src="../../ui-components.js"></script>
+  <script src="../../utils.js"></script>
+  <script src="../../moneda-config.js"></script>
+  <script src="../../layout.js"></script>
+  <script src="inventario.js"></script>
+</body>
+</html>

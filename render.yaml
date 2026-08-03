@@ -1,0 +1,45 @@
+# Blueprint de Render para el backend del Core ERP.
+#
+# Este archivo documenta la configuración que el proyecto necesita para
+# desplegarse en Render. Generado en una sesión de auditoría/despliegue
+# SIN acceso a una cuenta real de Render — no fue aplicado ni verificado
+# contra ningún servicio real. Antes de usarlo:
+#   1. Revisar/ajustar el "plan" y la región según la cuenta real.
+#   2. Definir SECRET_KEY y ADMIN_PASSWORD como secretos reales en el
+#      panel de Render (o dejar que Render los pida al importar este
+#      blueprint, gracias a "sync: false").
+#   3. Decidir la estrategia de persistencia (ver sección "disk" abajo
+#      y la nota sobre Postgres) ANTES del primer despliegue real.
+
+services:
+  - type: web
+    name: core-erp-backend
+    runtime: python
+    rootDir: backend
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: SECRET_KEY
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: DATABASE_URL
+        value: sqlite:////var/data/erp_almacen.db
+      # Dominio(s) reales donde se sirve el Frontend en producción
+      # (separados por coma si son varios). Obligatorio para que el
+      # Frontend desplegado pueda llamar a esta API — ver
+      # backend/.env.example. Sin este valor el backend solo acepta
+      # llamadas desde localhost/127.0.0.1.
+      - key: CORS_ORIGINS
+        sync: false
+    # Persistencia de SQLite: requiere un Persistent Disk montado en la
+    # misma ruta que DATABASE_URL. Sin esto, el archivo .db se pierde en
+    # cada redeploy porque el filesystem del Web Service es efímero.
+    # Alternativa recomendada para producción real: reemplazar
+    # DATABASE_URL por una base de datos Postgres gestionada de Render
+    # (postgresql://...) y eliminar este bloque "disk".
+    disk:
+      name: core-erp-data
+      mountPath: /var/data
+      sizeGB: 1

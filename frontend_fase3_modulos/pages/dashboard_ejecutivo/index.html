@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Ejecutivo Consolidado — Core ERP Almacén de Exportación</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" />
+  <link rel="stylesheet" href="../../erp.css" />
+
+  <style>
+    /*
+      FASE 4E — Consolidación Ejecutiva del Dashboard Gerencial de
+      Inventario. Reutiliza tal cual las reglas .kpi-card/.kpi-label/
+      .kpi-value, .semaforo-dot/.semaforo-dot-sm, .bar-row/.bar-track/
+      .bar-fill y .donut-* ya introducidas en pages/dashboard_inventario/
+      index.html (Fase 4B) y pages/reportes_gerenciales_inventario/
+      index.html (Fase 4D), copiadas aquí sin reinventarlas para que esta
+      pantalla se vea idéntica al resto del ERP. Las clases nuevas
+      (semaforo-panel-*, chart-col) son exclusivas de esta página y no
+      tocan erp.css.
+    */
+    .kpi-card { padding: 16px; border-left: 4px solid transparent; }
+    .kpi-card.kpi-ok { border-left-color: #1b8a5a; }
+    .kpi-card.kpi-alerta { border-left-color: #b8860b; }
+    .kpi-card.kpi-critico { border-left-color: #d64545; }
+    .kpi-label { font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--erp-text-muted); font-weight: 700; }
+    .kpi-value { font-size: clamp(16px, 1.6vw, 24px); font-weight: 800; margin-top: 6px; line-height: 1.2; word-break: break-word; overflow-wrap: anywhere; }
+
+    .semaforo-dot { width: 16px; height: 16px; border-radius: 50%; flex: 0 0 auto; }
+    .semaforo-dot.VERDE { background: #1b8a5a; }
+    .semaforo-dot.AMARILLO { background: #e0a300; }
+    .semaforo-dot.ROJO { background: #d64545; }
+    .semaforo-dot-sm { display:inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+    .semaforo-dot-sm.VERDE { background: #1b8a5a; }
+    .semaforo-dot-sm.AMARILLO { background: #e0a300; }
+    .semaforo-dot-sm.ROJO { background: #d64545; }
+
+    /* Panel ejecutivo (Sección 3): 3 tarjetas semáforo Alto/Medio/Bajo */
+    .semaforo-panel-card { padding: 16px; display: flex; align-items: center; gap: 14px; }
+    .semaforo-panel-titulo { font-size: 12px; font-weight: 700; color: var(--erp-text-muted); text-transform: uppercase; letter-spacing: .03em; }
+    .semaforo-panel-valor { font-size: 22px; font-weight: 800; margin-top: 2px; }
+    .semaforo-panel-detalle { font-size: 12px; color: var(--erp-text-muted); margin-top: 2px; }
+
+    /* Gráfico de barras horizontal simple (HTML/CSS, sin librería nueva) */
+    .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .bar-row:last-child { margin-bottom: 0; }
+    .bar-label { flex: 0 0 150px; font-size: 12.5px; color: var(--erp-text); }
+    .bar-track { flex: 1 1 auto; background: var(--erp-bg); border-radius: 6px; height: 16px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 6px; transition: width .3s ease; }
+    .bar-value { flex: 0 0 60px; text-align: right; font-size: 12.5px; font-weight: 700; }
+
+    /* Donut simple con conic-gradient */
+    .donut-wrap { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+    .donut-circle { width: 120px; height: 120px; border-radius: 50%; flex: 0 0 auto; display: flex; align-items: center; justify-content: center; }
+    .donut-center { width: 76px; height: 76px; border-radius: 50%; background: var(--erp-surface); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .donut-center .n { font-size: 18px; font-weight: 800; line-height: 1; }
+    .donut-center .t { font-size: 9.5px; color: var(--erp-text-muted); text-transform: uppercase; }
+    .donut-legend { display: flex; flex-direction: column; gap: 8px; font-size: 12.5px; }
+    .donut-legend .item { display: flex; align-items: center; gap: 8px; }
+    .donut-legend .swatch { width: 11px; height: 11px; border-radius: 3px; flex: 0 0 auto; }
+
+    .chart-col { min-height: 190px; }
+    .nota-contrato { font-size: 11.5px; }
+  </style>
+</head>
+<body>
+  <div id="erpApp">
+    <div class="page-header">
+      <div>
+        <div class="breadcrumb-erp"><b>Módulos</b> / Inventario / Dashboard Ejecutivo</div>
+        <h1>Dashboard Ejecutivo Consolidado</h1>
+        <div class="text-muted-erp" id="infoActualizado">Cargando…</div>
+      </div>
+      <div class="d-flex gap-2 flex-wrap">
+        <div class="dropdown">
+          <button class="btn btn-erp-secondary btn-sm dropdown-toggle" type="button" id="btnExportarExcel" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-file-earmark-excel me-1"></i>Exportar Excel
+          </button>
+          <ul class="dropdown-menu" aria-labelledby="btnExportarExcel">
+            <li><a class="dropdown-item" href="#" id="lnkExportarLotesExcel">Inventario por lote (.xlsx)</a></li>
+            <li><a class="dropdown-item" href="#" id="lnkExportarProximosVencerExcel">Próximos a vencer (.xlsx)</a></li>
+          </ul>
+        </div>
+        <div class="dropdown">
+          <button class="btn btn-erp-secondary btn-sm dropdown-toggle" type="button" id="btnExportarPdf" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-file-earmark-pdf me-1"></i>Exportar PDF
+          </button>
+          <ul class="dropdown-menu" aria-labelledby="btnExportarPdf">
+            <li><a class="dropdown-item" href="#" id="lnkExportarLotesPdf">Inventario por lote (.pdf)</a></li>
+            <li><a class="dropdown-item" href="#" id="lnkExportarProximosVencerPdf">Próximos a vencer (.pdf)</a></li>
+          </ul>
+        </div>
+        <button type="button" id="btnActualizar" class="btn btn-erp-primary btn-sm">
+          <i class="bi bi-arrow-clockwise me-1"></i>Actualizar Dashboard
+        </button>
+      </div>
+    </div>
+
+    <div id="estadoError" class="alert alert-danger" style="display:none"></div>
+
+    <div class="text-muted-erp nota-contrato mb-3">
+      Consolida en un único tablero los indicadores ya expuestos por
+      <code>GET /api/dashboard-inventario/resumen</code> (m23) y por los 4
+      endpoints de <code>/api/reportes-gerenciales-inventario/</code> (m24).
+      No agrega endpoints nuevos ni recalcula nada que el Backend ya
+      resuelve: solo consolida, filtra y grafica lo que esas 5 respuestas
+      ya traen.
+    </div>
+
+    <!-- SECCIÓN 1: RESUMEN EJECUTIVO -->
+    <div class="row g-3 mb-3">
+      <div class="col-6 col-md-4 col-lg-3">
+        <div class="erp-card kpi-card">
+          <div class="kpi-label"><i class="bi bi-cash-stack me-1"></i>Valor total inventario</div>
+          <div class="kpi-value" id="kpiValorTotal">—</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-lg-3">
+        <div class="erp-card kpi-card">
+          <div class="kpi-label"><i class="bi bi-box-seam me-1"></i>Productos activos</div>
+          <div class="kpi-value" id="kpiProductosActivos">—</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-lg-3">
+        <div class="erp-card kpi-card">
+          <div class="kpi-label"><i class="bi bi-layers me-1"></i>Lotes registrados</div>
+          <div class="kpi-value" id="kpiLotes">—</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-lg-3">
+        <div class="erp-card kpi-card" id="cardProductosCriticos">
+          <div class="kpi-label"><i class="bi bi-exclamation-triangle me-1"></i>Productos críticos</div>
+          <div class="kpi-value" id="kpiProductosCriticos">—</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-lg-3">
+        <div class="erp-card kpi-card" id="cardProximosVencer">
+          <div class="kpi-label"><i class="bi bi-hourglass-split me-1"></i>Próximos a vencer</div>
+          <div class="kpi-value" id="kpiProximosVencer">—</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-lg-3">
+        <div class="erp-card kpi-card" id="cardVencidos">
+          <div class="kpi-label"><i class="bi bi-x-octagon me-1"></i>Productos vencidos</div>
+          <div class="kpi-value" id="kpiVencidos">—</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-lg-3">
+        <div class="erp-card kpi-card" id="cardRiesgoMerma">
+          <div class="kpi-label"><i class="bi bi-shield-exclamation me-1"></i>Riesgo total de merma</div>
+          <div class="kpi-value" id="kpiRiesgoMerma">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 3: PANEL EJECUTIVO (semáforo Alto/Medio/Bajo) -->
+    <div class="row g-3 mb-3">
+      <div class="col-md-4">
+        <div class="erp-card semaforo-panel-card">
+          <div class="semaforo-dot ROJO"></div>
+          <div>
+            <div class="semaforo-panel-titulo">Riesgo alto</div>
+            <div class="semaforo-panel-valor" id="panelRiesgoAlto">—</div>
+            <div class="semaforo-panel-detalle">Nivel ALTO o CRÍTICO (m24 · productos-críticos)</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="erp-card semaforo-panel-card">
+          <div class="semaforo-dot AMARILLO"></div>
+          <div>
+            <div class="semaforo-panel-titulo">Riesgo medio</div>
+            <div class="semaforo-panel-valor" id="panelRiesgoMedio">—</div>
+            <div class="semaforo-panel-detalle">Nivel MEDIO (m24 · productos-críticos)</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="erp-card semaforo-panel-card">
+          <div class="semaforo-dot VERDE"></div>
+          <div>
+            <div class="semaforo-panel-titulo">Riesgo bajo</div>
+            <div class="semaforo-panel-valor" id="panelRiesgoBajo">—</div>
+            <div class="semaforo-panel-detalle">Resto de productos activos (m23 − m24)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 2: GRÁFICOS EJECUTIVOS -->
+    <div class="row g-3 mb-3">
+      <div class="col-lg-6">
+        <div class="erp-card">
+          <div class="card-header-erp"><i class="bi bi-bar-chart-line me-1"></i>Distribución del valor del inventario (Top valor)</div>
+          <div class="card-body-erp chart-col" id="chartTopValor"><div class="text-muted-erp">Cargando…</div></div>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="erp-card">
+          <div class="card-header-erp"><i class="bi bi-pie-chart me-1"></i>Estado de productos críticos</div>
+          <div class="card-body-erp chart-col" id="chartEstadoCriticos"><div class="text-muted-erp">Cargando…</div></div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="erp-card">
+          <div class="card-header-erp"><i class="bi bi-shield-exclamation me-1"></i>Riesgo de merma</div>
+          <div class="card-body-erp chart-col" id="chartRiesgoMerma"><div class="text-muted-erp">Cargando…</div></div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="erp-card">
+          <div class="card-header-erp"><i class="bi bi-hourglass-split me-1"></i>Productos sin rotación</div>
+          <div class="card-body-erp chart-col" id="chartSinRotacion"><div class="text-muted-erp">Cargando…</div></div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="erp-card">
+          <div class="card-header-erp"><i class="bi bi-calendar-x me-1"></i>Próximos a vencer</div>
+          <div class="card-body-erp chart-col" id="chartProximosVencer"><div class="text-muted-erp">Cargando…</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 4: FILTROS GLOBALES -->
+    <div class="erp-card mb-3">
+      <div class="card-header-erp"><i class="bi bi-funnel me-1"></i>Filtros globales</div>
+      <div class="card-body-erp">
+        <div class="filtros-bar">
+          <div class="filtro-item">
+            <label class="form-label-erp" for="inputBuscarGlobal">Buscar</label>
+            <input type="text" id="inputBuscarGlobal" class="form-control form-control-sm" placeholder="Código o nombre…" style="min-width: 240px;" />
+          </div>
+          <div class="filtro-item">
+            <label class="form-label-erp" for="selectCriticidadGlobal">Criticidad</label>
+            <select id="selectCriticidadGlobal" class="form-select form-select-sm" style="width:auto;">
+              <option value="">Todas</option>
+              <option value="MEDIO">Medio</option>
+              <option value="ALTO">Alto</option>
+              <option value="CRITICO">Crítico</option>
+            </select>
+          </div>
+          <div class="filtro-item">
+            <label class="form-label-erp" for="selectEstadoGlobal">Estado / tipo de riesgo</label>
+            <select id="selectEstadoGlobal" class="form-select form-select-sm" style="width:auto;">
+              <option value="">Todos</option>
+              <option value="BAJO_STOCK">Bajo stock</option>
+              <option value="RIESGO_MERMA">Riesgo de merma</option>
+              <option value="VENCIMIENTO">Vencimiento</option>
+            </select>
+          </div>
+        </div>
+        <div class="text-muted-erp nota-contrato mt-2">
+          "Buscar" filtra las 3 tablas visibles (Top valor, Productos
+          críticos y Sin rotación) por código o nombre de producto.
+          "Criticidad" y "Estado / tipo de riesgo" solo afectan la tabla
+          Productos críticos: es la única de las 3 cuyo endpoint
+          (<code>/productos-criticos</code>) expone <code>nivel_riesgo</code>
+          y <code>tipo_riesgo</code> por fila; Top valor y Sin rotación no
+          traen esos campos en el Backend.
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabla: Top valor inventario -->
+    <div class="erp-card mb-3">
+      <div class="card-header-erp"><i class="bi bi-trophy me-1"></i>Top valor inventario <span class="text-muted-erp" id="countTopValor"></span></div>
+      <div class="table-responsive-erp">
+        <table class="table-erp">
+          <thead>
+            <tr>
+              <th>Producto</th><th>Código</th>
+              <th class="text-end">Stock</th>
+              <th class="text-end">Costo unitario</th>
+              <th class="text-end">Valor inventario</th>
+              <th class="text-end">% participación</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyTopValor"><tr><td colspan="6" class="text-muted-erp">Cargando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tabla: Productos críticos -->
+    <div class="erp-card mb-3">
+      <div class="card-header-erp"><i class="bi bi-exclamation-octagon me-1"></i>Productos críticos <span class="text-muted-erp" id="countCriticos"></span></div>
+      <div class="table-responsive-erp">
+        <table class="table-erp">
+          <thead>
+            <tr>
+              <th>Producto</th><th>Código</th><th>Tipo de riesgo</th>
+              <th class="text-end">Stock actual</th>
+              <th class="text-end">Valor comprometido</th>
+              <th>Riesgo</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyCriticos"><tr><td colspan="6" class="text-muted-erp">Cargando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tabla: Productos sin rotación -->
+    <div class="erp-card">
+      <div class="card-header-erp"><i class="bi bi-hourglass-split me-1"></i>Productos sin rotación <span class="text-muted-erp" id="countSinRotacion"></span></div>
+      <div class="table-responsive-erp">
+        <table class="table-erp">
+          <thead>
+            <tr>
+              <th>Producto</th><th>Código</th>
+              <th class="text-end">Días sin movimiento</th>
+              <th class="text-end">Stock actual</th>
+              <th class="text-end">Valor inmovilizado</th>
+              <th>Riesgo</th>
+            </tr>
+          </thead>
+          <tbody id="tbodySinRotacion"><tr><td colspan="6" class="text-muted-erp">Cargando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+  <script src="../../config.js"></script>
+  <script src="../../auth.js"></script>
+  <script src="../../api-client.js"></script>
+  <script src="../../ui-components.js"></script>
+  <script src="../../utils.js"></script>
+  <script src="../../moneda-config.js"></script>
+  <script src="../../layout.js"></script>
+  <script src="dashboard_ejecutivo.js"></script>
+</body>
+</html>

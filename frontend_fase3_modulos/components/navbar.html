@@ -1,0 +1,92 @@
+<!--
+  components/navbar.html — Barra superior de Core ERP (Almacén de Exportación).
+
+  Lo inyecta layout.js (fetch + insertBefore #erpApp) en cada página
+  protegida. Usa las clases ya definidas en erp.css para la navbar
+  (erp-navbar, sidebar-toggle, navbar-search, navbar-right, navbar-chip,
+  navbar-bell, navbar-user, avatar, u-name, u-role) más utilidades de
+  Bootstrap 5 (dropdown, d-flex, gap-*, position-*) para lo que erp.css
+  no cubre explícitamente (el desplegable de usuario y el listado de
+  resultados de búsqueda). Requiere bootstrap.bundle.min.js (ya cargado
+  por las páginas de módulo) para que el dropdown de usuario funcione.
+
+  IDs que layout.js ya espera encontrar aquí y que cablea automáticamente:
+    - #btnToggleSidebar   -> togglea body.erp-sidebar-hidden
+    - #buscadorGlobal / #buscadorResultados -> solo evita que el campo
+      quede roto; el Backend todavía no expone un endpoint de búsqueda
+      global, así que esta lista queda vacía a propósito (no se inventa
+      una búsqueda real).
+    - #chipFecha span     -> se pinta con la fecha de hoy (es-PE)
+    - #userAvatar / #userNombre / #userRol -> se llenan con
+      GET /api/auth/me (Auth.obtenerUsuarioActual())
+    - #btnCerrarSesion    -> llama a Auth.cerrarSesion()
+
+  El ícono de campana es solo decorativo: el Backend no expone todavía
+  un endpoint de notificaciones, así que no se le conecta ninguna
+  lógica (no se inventa funcionalidad nueva).
+-->
+<header class="erp-navbar" id="navbar">
+  <div class="d-flex align-items-center gap-3">
+    <button type="button" class="sidebar-toggle" id="btnToggleSidebar" aria-label="Mostrar u ocultar menú lateral">
+      <i class="bi bi-list"></i>
+    </button>
+
+    <div class="navbar-search">
+      <i class="bi bi-search"></i>
+      <input
+        type="text"
+        id="buscadorGlobal"
+        placeholder="Buscar…"
+        autocomplete="off"
+        aria-label="Buscar en el ERP"
+      />
+      <div
+        id="buscadorResultados"
+        class="list-group position-absolute top-100 start-0 w-100 mt-1 shadow-sm"
+        style="display: none; z-index: 1050"
+      ></div>
+    </div>
+  </div>
+
+  <div class="navbar-right">
+    <div class="navbar-chip" id="chipFecha">
+      <i class="bi bi-calendar3"></i>
+      <span>—</span>
+    </div>
+
+    <div class="navbar-bell" title="Notificaciones">
+      <i class="bi bi-bell"></i>
+      <span class="dot"></span>
+    </div>
+
+    <div class="dropdown">
+      <div
+        class="navbar-user"
+        id="dropdownUsuario"
+        role="button"
+        data-bs-toggle="dropdown"
+        aria-expanded="false"
+      >
+        <div class="avatar" id="userAvatar">U</div>
+        <div class="d-none d-md-block">
+          <div class="u-name" id="userNombre">—</div>
+          <div class="u-role" id="userRol">—</div>
+        </div>
+        <i class="bi bi-chevron-down text-muted-erp d-none d-md-inline" style="font-size: 11px"></i>
+      </div>
+      <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownUsuario">
+        <li>
+          <a class="dropdown-item" href="__ROOT__pages/configuracion/index.html">
+            <i class="bi bi-gear me-2"></i>Configuración
+          </a>
+        </li>
+        <li><hr class="dropdown-divider" /></li>
+        <li>
+          <a class="dropdown-item" href="#" id="btnCerrarSesion">
+            <i class="bi bi-box-arrow-right me-2"></i>Cerrar sesión
+          </a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</header>

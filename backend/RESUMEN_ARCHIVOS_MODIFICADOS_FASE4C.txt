@@ -1,0 +1,48 @@
+FASE 4C — BACKEND REPORTES GERENCIALES DE INVENTARIO
+RESUMEN DE ARCHIVOS
+
+============================================================
+ARCHIVOS CREADOS
+============================================================
+backend/app/modules/m24_reportes_gerenciales_inventario/__init__.py
+backend/app/modules/m24_reportes_gerenciales_inventario/models.py
+backend/app/modules/m24_reportes_gerenciales_inventario/schemas.py
+backend/app/modules/m24_reportes_gerenciales_inventario/repository.py
+backend/app/modules/m24_reportes_gerenciales_inventario/service.py
+backend/app/modules/m24_reportes_gerenciales_inventario/router.py
+backend/app/modules/m24_reportes_gerenciales_inventario/validators.py
+backend/app/modules/m24_reportes_gerenciales_inventario/static/          (vacio)
+backend/app/modules/m24_reportes_gerenciales_inventario/templates/       (vacio)
+
+backend/INFORME_TECNICO_FASE4C_BACKEND_REPORTES_GERENCIALES.md
+backend/RESUMEN_ARCHIVOS_MODIFICADOS_FASE4C.txt
+backend/test_fase4c_reportes_gerenciales.py
+backend/evidencias_pruebas_fase4c/evidencia_endpoints_m24.log
+backend/evidencias_pruebas_fase4c/evidencia_py_compile.log
+backend/evidencias_pruebas_fase4c/evidencia_regresion_test_fase1_seguridad_perecibles.log
+backend/evidencias_pruebas_fase4c/evidencia_regresion_test_fase2_control_gerencial_perecibles.log
+backend/evidencias_pruebas_fase4c/evidencia_regresion_test_fase3_inteligencia_inventario.log
+
+============================================================
+ARCHIVOS MODIFICADOS (forma aditiva)
+============================================================
+backend/app/main.py
+    + 1 linea: import de m24_router
+    + 1 linea: app.include_router(m24_router)
+    (ningun import ni router existente fue tocado)
+
+backend/app/config.py
+    + 1 setting nuevo: UMBRAL_DIAS_SIN_ROTACION: int = 30
+    (ningun setting existente fue tocado)
+
+============================================================
+ARCHIVOS ELIMINADOS
+============================================================
+Ninguno.
+
+============================================================
+BACKUP PREVIO
+============================================================
+backend/backups/20260802_072658_pre_fase4c_reportes_gerenciales_inventario/
+    app/     -> copia completa de backend/app antes de esta fase
+    main.py  -> copia adicional del main.py original

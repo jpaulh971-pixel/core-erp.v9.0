@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ventas — Core ERP Almacén de Exportación</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" />
+  <link rel="stylesheet" href="../../erp.css" />
+  <style>
+    .nota-contrato { font-size: 11.5px; }
+    .historial-item { display: flex; gap: 10px; padding: 6px 0; border-bottom: 1px dashed var(--erp-border); }
+    .historial-item:last-child { border-bottom: none; }
+    .historial-icono { width: 22px; text-align: center; }
+    .historial-icono.pendiente { color: var(--erp-text-muted); }
+    .dropzone-carga {
+      border: 1.5px dashed var(--erp-border); border-radius: var(--erp-radius);
+      padding: 18px; background: #fafbfd; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    }
+    .stat-box {
+      background: #fafbfd; border: 1px solid var(--erp-border); border-radius: var(--erp-radius);
+      padding: 12px 16px; flex: 1 1 140px; min-width: 130px;
+    }
+    .stat-box .stat-valor { font-size: 20px; font-weight: 800; line-height: 1.2; }
+    .stat-box .stat-etiqueta { font-size: 11.5px; color: var(--erp-text-muted); }
+  </style>
+</head>
+<body>
+  <div id="erpApp">
+    <div class="page-header">
+      <div>
+        <div class="breadcrumb-erp"><b>Módulos</b> / Ventas</div>
+        <h1>Órdenes de venta</h1>
+      </div>
+      <div class="filtros-bar">
+        <button type="button" id="btnImportarVentas" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-file-earmark-arrow-up me-1"></i>Importar Ventas
+        </button>
+        <button type="button" id="btnNuevaOrden" class="btn btn-erp-primary btn-sm">
+          <i class="bi bi-plus-lg me-1"></i>Nueva orden de venta
+        </button>
+      </div>
+    </div>
+
+    <div id="estadoError" class="alert alert-danger" style="display:none"></div>
+
+    <div class="erp-card">
+      <div class="card-header-erp"><i class="bi bi-receipt me-1"></i>Órdenes de venta</div>
+      <div class="card-body-erp pb-0">
+        <div class="filtros-bar">
+          <div class="filtro-item">
+            <label class="form-label-erp" for="inputBuscarOrdenes">Buscar</label>
+            <input type="text" id="inputBuscarOrdenes" class="form-control form-control-sm" placeholder="N.º de orden, cliente u observaciones…" style="min-width: 260px;" />
+          </div>
+          <div class="filtro-item">
+            <label class="form-label-erp" for="selectEstado">Estado</label>
+            <select id="selectEstado" class="form-select form-select-sm">
+              <option value="">Todos</option>
+              <option value="BORRADOR">Borrador</option>
+              <option value="CONFIRMADA">Confirmada</option>
+              <option value="DESPACHADA">Despachada</option>
+              <option value="CANCELADA">Cancelada</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="table-responsive-erp">
+        <table class="table-erp">
+          <thead>
+            <tr>
+              <th>N.º</th><th>Cliente</th><th>Estado</th><th>Moneda</th>
+              <th>Unidad de Medida</th>
+              <th class="text-end">Total</th><th>Creada</th><th class="text-end">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyOrdenes"><tr><td colspan="8" class="text-muted-erp">Cargando…</td></tr></tbody>
+        </table>
+      </div>
+      <div class="card-body-erp d-flex flex-wrap align-items-center justify-content-between gap-2 border-top">
+        <div class="d-flex align-items-center gap-2">
+          <span class="text-muted-erp" id="paginacionResumenOrdenes">&nbsp;</span>
+          <select id="selectTamanioPaginaOrdenes" class="form-select form-select-sm" style="width:auto;">
+            <option value="10">10 / página</option>
+            <option value="25">25 / página</option>
+            <option value="50">50 / página</option>
+            <option value="9999">Todos</option>
+          </select>
+        </div>
+        <nav aria-label="Paginación de órdenes de venta">
+          <ul class="pagination pagination-sm mb-0" id="paginacionControlesOrdenes"></ul>
+        </nav>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Nueva orden de venta -->
+  <div class="modal fade" id="modalNuevaOrden" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <form id="formNuevaOrden">
+          <div class="modal-header">
+            <h5 class="modal-title">Nueva orden de venta</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div id="modalNuevaOrdenError" class="alert alert-danger" style="display:none"></div>
+
+            <div class="row g-2 mb-2">
+              <div class="col-8">
+                <label class="form-label-erp" for="ordenCliente">Cliente</label>
+                <select id="ordenCliente" class="form-select form-select-sm" required>
+                  <option value="">Seleccionar…</option>
+                </select>
+              </div>
+              <div class="col-4">
+                <label class="form-label-erp" for="ordenMoneda">Moneda</label>
+                <select id="ordenMoneda" class="form-select form-select-sm">
+                  <option value="PEN" selected>PEN</option>
+                  <option value="USD">USD</option>
+                  <option value="EUR">EUR</option>
+                </select>
+              </div>
+            </div>
+            <div class="mb-2">
+              <label class="form-label-erp" for="ordenObservaciones">Observaciones (opcional)</label>
+              <textarea id="ordenObservaciones" class="form-control form-control-sm" rows="2" maxlength="500"></textarea>
+            </div>
+
+            <div class="mb-2">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <label class="form-label-erp mb-0">Ítems</label>
+                <button type="button" id="btnAgregarItem" class="btn btn-outline-secondary btn-sm">
+                  <i class="bi bi-plus-lg me-1"></i>Agregar ítem
+                </button>
+              </div>
+              <div class="table-responsive-erp">
+                <table class="table-erp">
+                  <thead>
+                    <tr>
+                      <th>Producto</th><th style="width:120px;">Cantidad</th>
+                      <th style="width:140px;">Precio unit.</th><th style="width:110px;" class="text-end">Subtotal</th>
+                      <th style="width:40px;"></th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbodyItemsOrden"></tbody>
+                  <tfoot>
+                    <tr>
+                      <td colspan="3" class="text-end fw-bold">Total</td>
+                      <td class="text-end fw-bold" id="totalOrden">0.00</td>
+                      <td></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-erp-primary btn-sm">Crear orden</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Detalle de orden -->
+  <div class="modal fade" id="modalDetalleOrden" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="detalleOrdenTitulo">Orden de venta</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div id="modalDetalleOrdenError" class="alert alert-danger" style="display:none"></div>
+          <div class="row g-2 mb-3" id="detalleOrdenInfo"></div>
+
+          <div class="table-responsive-erp mb-3">
+            <table class="table-erp">
+              <thead>
+                <tr>
+                  <th>Producto</th><th class="text-end">Cantidad</th>
+                  <th class="text-end">Costo Unitario</th>
+                  <th class="text-end">COGS</th>
+                  <th class="text-end">Precio Venta</th>
+                  <th class="text-end">Margen</th>
+                  <th class="text-end">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyDetalleItems"></tbody>
+            </table>
+          </div>
+
+          <div id="bloqueComprobante" class="mb-3" style="display:none">
+            <a id="linkVerSunat" class="btn btn-outline-secondary btn-sm" href="#">
+              <i class="bi bi-file-earmark-text me-1"></i>Ver / emitir comprobante SUNAT
+            </a>
+          </div>
+
+          <div class="card-header-erp mb-1"><i class="bi bi-clock-history me-1"></i>Historial de estados</div>
+          <div id="historialEstadosOrden"></div>
+          <div class="text-muted-erp nota-contrato mt-1">
+            Esta orden no se puede editar directamente: solo se puede avanzar de estado con los botones
+            de abajo (Confirmar / Despachar / Cancelar).
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="btnCancelarOrden" class="btn btn-outline-danger btn-sm">
+            <i class="bi bi-x-lg me-1"></i>Cancelar orden
+          </button>
+          <button type="button" id="btnConfirmarOrden" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-check-lg me-1"></i>Confirmar
+          </button>
+          <button type="button" id="btnDespacharOrden" class="btn btn-erp-primary btn-sm">
+            <i class="bi bi-truck me-1"></i>Despachar
+          </button>
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Importar Ventas -->
+  <div class="modal fade" id="modalImportarVentas" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Importar Ventas</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div id="errorImportarVentas" class="alert alert-danger" style="display:none"></div>
+
+          <div class="row g-2 mb-3">
+            <div class="col-md-6">
+              <label class="form-label-erp" for="selectInventarioImportarVentas">Almacén / Inventario de salida</label>
+              <select id="selectInventarioImportarVentas" class="form-select form-select-sm">
+                <option value="">Cargando almacenes…</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="dropzone-carga mb-3">
+            <div style="flex:1 1 260px;">
+              <label class="form-label-erp" for="inputArchivoImportarVentas">Archivo Excel de ventas</label>
+              <input type="file" id="inputArchivoImportarVentas" class="form-control form-control-sm" accept=".xlsx,.xls" />
+            </div>
+            <button type="button" id="btnPrevisualizarImportarVentas" class="btn btn-erp-primary btn-sm">
+              <i class="bi bi-eye me-1"></i>Previsualizar
+            </button>
+          </div>
+
+          <div id="resumenImportarVentas" style="display:none">
+            <div class="d-flex flex-wrap gap-2 mb-3" id="statsImportarVentas"></div>
+
+            <div id="bloqueErroresImportarVentas" style="display:none" class="mb-3">
+              <div class="card-header-erp mb-0"><i class="bi bi-exclamation-triangle me-1"></i>Errores y advertencias</div>
+              <div class="table-responsive-erp">
+                <table class="table-erp">
+                  <thead><tr><th style="width:80px;">Fila</th><th>Detalle</th></tr></thead>
+                  <tbody id="tbodyErroresImportarVentas"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div id="resultadoImportarVentas" class="mt-2" style="display:none"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <span class="text-muted-erp nota-contrato me-auto" id="notaImportarVentas"></span>
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+          <button type="button" id="btnConfirmarImportarVentas" class="btn btn-erp-primary btn-sm" disabled>
+            <i class="bi bi-check2-circle me-1"></i>Importar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+  <script src="../../config.js"></script>
+  <script src="../../auth.js"></script>
+  <script src="../../api-client.js"></script>
+  <script src="../../ui-components.js"></script>
+  <script src="../../utils.js"></script>
+  <script src="../../moneda-config.js"></script>
+  <script src="../../layout.js"></script>
+  <script src="ventas.js"></script>
+</body>
+</html>

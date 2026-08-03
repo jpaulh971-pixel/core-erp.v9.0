@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Gerencial de Inventario — Core ERP Almacén de Exportación</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" />
+  <link rel="stylesheet" href="../../erp.css" />
+
+  <style>
+    /* FASE 4B — Dashboard Gerencial de Inventario. Mismas reglas
+       .kpi-card/.kpi-label/.kpi-value ya usadas tal cual en dashboard.html
+       y pages/inventario/index.html (copiadas, no reinventadas), para que
+       las tarjetas KPI de esta pantalla se vean idénticas al resto del ERP.
+       Las clases nuevas (semaforo-*, chart-bar-*, chart-donut-*, alerta-*)
+       son exclusivas de esta página y no tocan erp.css. */
+    .kpi-card { padding: 16px; border-left: 4px solid transparent; }
+    .kpi-card.kpi-ok { border-left-color: #1b8a5a; }
+    .kpi-card.kpi-alerta { border-left-color: #b8860b; }
+    .kpi-card.kpi-critico { border-left-color: #d64545; }
+    .kpi-label {
+      font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em;
+      color: var(--erp-text-muted); font-weight: 700;
+    }
+    .kpi-value { font-size: clamp(16px, 1.6vw, 24px); font-weight: 800; margin-top: 6px; line-height: 1.2; word-break: break-word; overflow-wrap: anywhere; }
+
+    /* Semáforo gerencial (Stock / Vencimiento) */
+    .semaforo-card { padding: 16px; display: flex; align-items: center; gap: 14px; }
+    .semaforo-dot { width: 16px; height: 16px; border-radius: 50%; flex: 0 0 auto; }
+    .semaforo-dot.VERDE, .semaforo-dot.ACTIVO { background: #1b8a5a; }
+    .semaforo-dot.AMARILLO, .semaforo-dot.PROXIMO_A_VENCER { background: #e0a300; }
+    .semaforo-dot.ROJO, .semaforo-dot.VENCIDO { background: #d64545; }
+    .semaforo-titulo { font-size: 12px; font-weight: 700; color: var(--erp-text-muted); text-transform: uppercase; letter-spacing: .03em; }
+    .semaforo-estado { font-size: 17px; font-weight: 800; margin-top: 2px; }
+    .semaforo-detalle { font-size: 12px; color: var(--erp-text-muted); margin-top: 2px; }
+
+    /* Gráfico de barras horizontal simple (HTML/CSS, sin librería nueva) */
+    .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .bar-row:last-child { margin-bottom: 0; }
+    .bar-label { flex: 0 0 150px; font-size: 12.5px; color: var(--erp-text); }
+    .bar-track { flex: 1 1 auto; background: var(--erp-bg); border-radius: 6px; height: 16px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 6px; transition: width .3s ease; }
+    .bar-value { flex: 0 0 40px; text-align: right; font-size: 12.5px; font-weight: 700; }
+
+    /* Donut simple con conic-gradient (estado de lotes) */
+    .donut-wrap { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+    .donut-circle {
+      width: 130px; height: 130px; border-radius: 50%; flex: 0 0 auto;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .donut-center { width: 82px; height: 82px; border-radius: 50%; background: var(--erp-surface); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .donut-center .n { font-size: 20px; font-weight: 800; line-height: 1; }
+    .donut-center .t { font-size: 10px; color: var(--erp-text-muted); text-transform: uppercase; }
+    .donut-legend { display: flex; flex-direction: column; gap: 8px; font-size: 12.5px; }
+    .donut-legend .item { display: flex; align-items: center; gap: 8px; }
+    .donut-legend .swatch { width: 11px; height: 11px; border-radius: 3px; flex: 0 0 auto; }
+
+    /* Alertas principales */
+    .alerta-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--erp-border); }
+    .alerta-item:last-child { border-bottom: none; }
+    .alerta-item i { font-size: 16px; flex: 0 0 auto; }
+    .alerta-texto { flex: 1 1 auto; font-size: 13px; }
+    .alerta-item.sev-critico i { color: #d64545; }
+    .alerta-item.sev-alerta i { color: #b8860b; }
+    .alerta-item.sev-ok i { color: #1b8a5a; }
+  </style>
+</head>
+<body>
+  <div id="erpApp">
+    <div class="page-header">
+      <div>
+        <div class="breadcrumb-erp"><b>Módulos</b> / Inventario / Dashboard Gerencial</div>
+        <h1>Dashboard Gerencial de Inventario</h1>
+        <div class="text-muted-erp" id="infoActualizado">Cargando…</div>
+      </div>
+      <button type="button" id="btnActualizar" class="btn btn-erp-primary btn-sm">
+        <i class="bi bi-arrow-clockwise me-1"></i>Actualizar
+      </button>
+    </div>
+
+    <div id="estadoError" class="alert alert-danger" style="display:none"></div>
+
+    <!-- 1) TARJETAS KPI PRINCIPALES -->
+    <div class="row g-3 mb-3">
+      <div class="col-6 col-md-4 col-lg-3">
+        <div class="erp-card kpi-card">
+          <div class="kpi-label"><i class="bi bi-cash-stack me-1"></i>Valor total inventario</div>
+          <div class="kpi-value" id="kpiValorTotal">—</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-lg-3">
+        <div class="erp-card kpi-card">
+          <div class="kpi-label"><i class="bi bi-box-seam me-1"></i>Cantidad de productos</div>
+          <div class="kpi-value" id="kpiCantidadProductos">—</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-lg-3">
+        <div class="erp-card kpi-card">
+          <div class="kpi-label"><i class="bi bi-layers me-1"></i>Cantidad de lotes</div>
+          <div class="kpi-value" id="kpiCantidadLotes">—</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-lg-3">
+        <div class="erp-card kpi-card" id="cardBajoStock">
+          <div class="kpi-label"><i class="bi bi-exclamation-triangle me-1"></i>Bajo stock mínimo</div>
+          <div class="kpi-value" id="kpiBajoStock">—</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-lg-3">
+        <div class="erp-card kpi-card" id="cardProximosVencer">
+          <div class="kpi-label"><i class="bi bi-hourglass-split me-1"></i>Próximos a vencer</div>
+          <div class="kpi-value" id="kpiProximosVencer">—</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-lg-3">
+        <div class="erp-card kpi-card" id="cardVencidos">
+          <div class="kpi-label"><i class="bi bi-x-octagon me-1"></i>Productos vencidos</div>
+          <div class="kpi-value" id="kpiVencidos">—</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-lg-3">
+        <div class="erp-card kpi-card" id="cardRiesgoMerma">
+          <div class="kpi-label"><i class="bi bi-shield-exclamation me-1"></i>Riesgo total de merma</div>
+          <div class="kpi-value" id="kpiRiesgoMerma">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2) SEMÁFORO GERENCIAL -->
+    <div class="row g-3 mb-3">
+      <div class="col-lg-6">
+        <div class="erp-card semaforo-card">
+          <div class="semaforo-dot" id="semaforoStockDot"></div>
+          <div>
+            <div class="semaforo-titulo">Semáforo de stock</div>
+            <div class="semaforo-estado" id="semaforoStockEstado">—</div>
+            <div class="semaforo-detalle" id="semaforoStockDetalle">Cargando…</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="erp-card semaforo-card">
+          <div class="semaforo-dot" id="semaforoVencimientoDot"></div>
+          <div>
+            <div class="semaforo-titulo">Semáforo de vencimiento</div>
+            <div class="semaforo-estado" id="semaforoVencimientoEstado">—</div>
+            <div class="semaforo-detalle" id="semaforoVencimientoDetalle">Cargando…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3) GRÁFICOS GERENCIALES (HTML/CSS simple, sin librería nueva) -->
+    <div class="row g-3 mb-3">
+      <div class="col-lg-5">
+        <div class="erp-card">
+          <div class="card-header-erp"><i class="bi bi-bar-chart-line me-1"></i>Distribución de riesgos</div>
+          <div class="card-body-erp" id="chartDistribucionRiesgos">
+            <div class="text-muted-erp">Cargando…</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="erp-card">
+          <div class="card-header-erp"><i class="bi bi-pie-chart me-1"></i>Estado del inventario (lotes)</div>
+          <div class="card-body-erp" id="chartEstadoInventario">
+            <div class="text-muted-erp">Cargando…</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-3">
+        <div class="erp-card">
+          <div class="card-header-erp"><i class="bi bi-bell me-1"></i>Alertas principales</div>
+          <div class="card-body-erp" id="listaAlertas">
+            <div class="text-muted-erp">Cargando…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4) TABLA RESUMEN GERENCIAL -->
+    <div class="erp-card">
+      <div class="card-header-erp"><i class="bi bi-table me-1"></i>Resumen gerencial</div>
+      <div class="table-responsive-erp">
+        <table class="table-erp">
+          <thead>
+            <tr><th>Indicador</th><th class="text-end">Valor</th><th>Estado</th></tr>
+          </thead>
+          <tbody id="tbodyResumenGerencial">
+            <tr><td colspan="3" class="text-muted-erp">Cargando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+  <script src="../../config.js"></script>
+  <script src="../../auth.js"></script>
+  <script src="../../api-client.js"></script>
+  <script src="../../ui-components.js"></script>
+  <script src="../../utils.js"></script>
+  <script src="../../moneda-config.js"></script>
+  <script src="../../layout.js"></script>
+  <script src="dashboard_inventario.js"></script>
+</body>
+</html>

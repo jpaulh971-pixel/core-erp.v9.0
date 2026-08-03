@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Theory of Constraints — Core ERP Almacén de Exportación</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" />
+  <link rel="stylesheet" href="../../erp.css" />
+
+  <style>
+    .kpi-card { padding: 16px; }
+    .kpi-label { font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--erp-text-muted); font-weight: 700; }
+    .kpi-value { font-size: clamp(15px, 1.5vw, 22px); font-weight: 800; margin-top: 6px; line-height: 1.2; word-break: break-word; overflow-wrap: anywhere; }
+    .badge-count {
+      font-size: 11px; font-weight: 700; color: var(--erp-text-muted);
+      background: rgba(0,0,0,.05); border-radius: 10px; padding: 1px 8px; vertical-align: middle;
+    }
+    #filtroDesde.is-invalid, #filtroHasta.is-invalid { border-color: #dc3545; }
+  </style>
+</head>
+<body>
+  <div id="erpApp">
+    <div class="page-header">
+      <div>
+        <div class="breadcrumb-erp"><b>Módulos de mejora continua</b> / Theory of Constraints</div>
+        <h1>Theory of Constraints</h1>
+      </div>
+      <div class="filtros-bar">
+        <div class="filtro-item">
+          <label class="form-label-erp" for="filtroDesde">Desde</label>
+          <input type="date" id="filtroDesde" class="form-control form-control-sm" />
+        </div>
+        <div class="filtro-item">
+          <label class="form-label-erp" for="filtroHasta">Hasta</label>
+          <input type="date" id="filtroHasta" class="form-control form-control-sm" />
+        </div>
+        <button type="button" id="btnAplicarFiltros" class="btn btn-erp-primary btn-sm">
+          <i class="bi bi-funnel me-1"></i>Aplicar
+        </button>
+      </div>
+    </div>
+
+    <div id="estadoError" class="alert alert-danger" style="display:none"></div>
+
+    <!-- Contabilidad de throughput -->
+    <div class="row g-3 mb-3">
+      <div class="col-6 col-lg-3">
+        <div class="erp-card kpi-card"><div class="kpi-label">Ingreso ventas despachadas</div><div class="kpi-value" id="tocIngreso">—</div></div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="erp-card kpi-card"><div class="kpi-label">Costo mercadería vendida</div><div class="kpi-value" id="tocCosto">—</div></div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="erp-card kpi-card"><div class="kpi-label">Throughput</div><div class="kpi-value" id="tocThroughput">—</div></div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="erp-card kpi-card"><div class="kpi-label">Operating expense</div><div class="kpi-value" id="tocOpex">—</div></div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="erp-card kpi-card"><div class="kpi-label">Utilidad neta (TOC)</div><div class="kpi-value" id="tocUtilidad">—</div></div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="erp-card kpi-card"><div class="kpi-label">Inversión en inventario</div><div class="kpi-value" id="tocInversion">—</div></div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="erp-card kpi-card"><div class="kpi-label">Retorno sobre inversión</div><div class="kpi-value" id="tocRoi">—</div></div>
+      </div>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-lg-6">
+        <div class="erp-card h-100">
+          <div class="card-header-erp"><i class="bi bi-exclamation-diamond"></i>Restricciones de stock <span class="badge-count" id="countRestricciones"></span></div>
+          <div class="table-responsive-erp">
+            <table class="table-erp">
+              <thead>
+                <tr><th>Código</th><th>Producto</th><th class="text-end">Demanda pendiente</th><th class="text-end">Stock disp.</th><th class="text-end">Déficit</th></tr>
+              </thead>
+              <tbody id="tbodyRestricciones"><tr><td colspan="5" class="text-muted-erp">Cargando…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="erp-card h-100">
+          <div class="card-header-erp"><i class="bi bi-hourglass-split"></i>Órdenes en espera <span class="badge-count" id="countOrdenesEspera"></span></div>
+          <div class="table-responsive-erp">
+            <table class="table-erp">
+              <thead>
+                <tr><th>Cliente</th><th>Confirmado</th><th class="text-end">Días esperando</th><th class="text-end">Monto estimado</th></tr>
+              </thead>
+              <tbody id="tbodyOrdenesEspera"><tr><td colspan="4" class="text-muted-erp">Cargando…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+  <script src="../../config.js"></script>
+  <script src="../../auth.js"></script>
+  <script src="../../api-client.js"></script>
+  <script src="../../ui-components.js"></script>
+  <script src="../../utils.js"></script>
+  <script src="../../moneda-config.js"></script>
+  <script src="../../layout.js"></script>
+  <script src="theory_of_constraints.js"></script>
+</body>
+</html>

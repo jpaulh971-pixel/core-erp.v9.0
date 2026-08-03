@@ -1,0 +1,30 @@
+# =============================================================================
+# FASE 2 - SEGURIDAD DE CREDENCIALES
+# Este archivo excluye del control de versiones (y de futuros entregables
+# ZIP generados con `git archive` o similar) los archivos que contienen
+# credenciales reales o artefactos locales que no deben distribuirse.
+# =============================================================================
+
+# Credenciales reales de entorno. SOLO backend/.env.example (plantilla sin
+# valores reales) debe versionarse y distribuirse.
+backend/.env
+.env
+*.env
+!*.env.example
+
+# Bytecode / caches de Python
+__pycache__/
+*.py[cod]
+*.pyc
+
+# Entornos virtuales
+venv/
+.venv/
+env/
+
+# Base de datos local SQLite (dev)
+*.db
+*.sqlite3
+
+# Logs y evidencias locales de ejecución
+*.log

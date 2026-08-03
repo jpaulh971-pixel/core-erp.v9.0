@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reportes — Core ERP Almacén de Exportación</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" />
+  <link rel="stylesheet" href="../../erp.css" />
+
+  <style>
+    .kpi-card { padding: 16px; }
+    .kpi-label {
+      font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em;
+      color: var(--erp-text-muted); font-weight: 700;
+    }
+    .kpi-value { font-size: clamp(16px, 1.6vw, 24px); font-weight: 800; margin-top: 6px; line-height: 1.2; word-break: break-word; overflow-wrap: anywhere; }
+    .nav-tabs-erp { border-bottom: 1px solid var(--erp-border); margin-bottom: 0; }
+    .nav-tabs-erp .nav-link {
+      color: var(--erp-text-muted); font-weight: 600; font-size: 13px; border: none;
+      border-bottom: 2px solid transparent; border-radius: 0;
+    }
+    .nav-tabs-erp .nav-link.active { color: var(--erp-primary); border-bottom-color: var(--erp-primary); background: transparent; }
+    .badge-count {
+      font-size: 11px; font-weight: 700; color: var(--erp-text-muted);
+      background: rgba(0,0,0,.05); border-radius: 10px; padding: 1px 8px; vertical-align: middle;
+    }
+    #filtroDesde.is-invalid, #filtroHasta.is-invalid { border-color: #dc3545; }
+  </style>
+</head>
+<body>
+  <div id="erpApp">
+    <div class="page-header">
+      <div>
+        <div class="breadcrumb-erp"><b>Módulos</b> / Reportes</div>
+        <h1>Reportes</h1>
+      </div>
+      <div class="filtros-bar">
+        <div class="filtro-item">
+          <label class="form-label-erp" for="filtroDesde">Desde</label>
+          <input type="date" id="filtroDesde" class="form-control form-control-sm" />
+        </div>
+        <div class="filtro-item">
+          <label class="form-label-erp" for="filtroHasta">Hasta</label>
+          <input type="date" id="filtroHasta" class="form-control form-control-sm" />
+        </div>
+        <button type="button" id="btnAplicarFiltros" class="btn btn-erp-primary btn-sm">
+          <i class="bi bi-funnel me-1"></i>Aplicar
+        </button>
+      </div>
+    </div>
+
+    <div id="estadoError" class="alert alert-danger" style="display:none"></div>
+
+    <!-- KPIs de resumen-general -->
+    <div class="row g-3 mb-3">
+      <div class="col-6 col-lg-2">
+        <div class="erp-card kpi-card">
+          <div class="kpi-label">Vendido (periodo)</div>
+          <div class="kpi-value" id="kpiTotalVendido">—</div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-2">
+        <div class="erp-card kpi-card">
+          <div class="kpi-label">Comprado (periodo)</div>
+          <div class="kpi-value" id="kpiTotalComprado">—</div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-2">
+        <div class="erp-card kpi-card">
+          <div class="kpi-label">Órdenes de venta</div>
+          <div class="kpi-value" id="kpiOrdenesVenta">—</div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-2">
+        <div class="erp-card kpi-card">
+          <div class="kpi-label">Órdenes de compra</div>
+          <div class="kpi-value" id="kpiOrdenesCompra">—</div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-2">
+        <div class="erp-card kpi-card">
+          <div class="kpi-label">Valor inventario actual</div>
+          <div class="kpi-value" id="kpiValorInventario">—</div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-2">
+        <div class="erp-card kpi-card">
+          <div class="kpi-label">Bajo stock mínimo</div>
+          <div class="kpi-value" id="kpiBajoStock">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="erp-card">
+      <ul class="nav nav-tabs-erp px-2 pt-2" role="tablist">
+        <li class="nav-item">
+          <button class="nav-link active" id="tabBtnVentas" data-bs-toggle="tab" data-bs-target="#tabVentas" type="button">
+            <i class="bi bi-cart-check me-1"></i>Ventas
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" id="tabBtnCompras" data-bs-toggle="tab" data-bs-target="#tabCompras" type="button">
+            <i class="bi bi-truck me-1"></i>Compras
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" id="tabBtnInventario" data-bs-toggle="tab" data-bs-target="#tabInventario" type="button">
+            <i class="bi bi-boxes me-1"></i>Inventario valorizado
+          </button>
+        </li>
+      </ul>
+
+      <div class="tab-content">
+        <!-- Ventas -->
+        <div class="tab-pane fade show active" id="tabVentas">
+          <div class="row g-0">
+            <div class="col-lg-6">
+              <div class="card-header-erp">Por producto <span class="badge-count" id="countVentasProducto"></span></div>
+              <div class="table-responsive-erp">
+                <table class="table-erp">
+                  <thead><tr><th>Código</th><th>Producto</th><th class="text-end">Cantidad</th><th class="text-end">Total</th><th class="text-end">Costo Unit. Prom.</th></tr></thead>
+                  <tbody id="tbodyVentasProducto"><tr><td colspan="5" class="text-muted-erp">Cargando…</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="col-lg-6">
+              <div class="card-header-erp">Por cliente <span class="badge-count" id="countVentasCliente"></span></div>
+              <div class="table-responsive-erp">
+                <table class="table-erp">
+                  <thead><tr><th>Cliente</th><th class="text-end">Órdenes</th><th class="text-end">Total</th></tr></thead>
+                  <tbody id="tbodyVentasCliente"><tr><td colspan="3" class="text-muted-erp">Cargando…</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="card-body-erp text-muted-erp" id="resumenVentas"></div>
+        </div>
+
+        <!-- Compras -->
+        <div class="tab-pane fade" id="tabCompras">
+          <div class="row g-0">
+            <div class="col-lg-6">
+              <div class="card-header-erp">Por producto <span class="badge-count" id="countComprasProducto"></span></div>
+              <div class="table-responsive-erp">
+                <table class="table-erp">
+                  <thead><tr><th>Código</th><th>Producto</th><th class="text-end">Cantidad</th><th class="text-end">Total</th><th class="text-end">Costo Unit. Prom. (landed)</th></tr></thead>
+                  <tbody id="tbodyComprasProducto"><tr><td colspan="5" class="text-muted-erp">Cargando…</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="col-lg-6">
+              <div class="card-header-erp">Por proveedor <span class="badge-count" id="countComprasProveedor"></span></div>
+              <div class="table-responsive-erp">
+                <table class="table-erp">
+                  <thead><tr><th>Proveedor</th><th class="text-end">Órdenes</th><th class="text-end">Total</th></tr></thead>
+                  <tbody id="tbodyComprasProveedor"><tr><td colspan="3" class="text-muted-erp">Cargando…</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="card-body-erp text-muted-erp" id="resumenCompras"></div>
+        </div>
+
+        <!-- Inventario valorizado -->
+        <div class="tab-pane fade" id="tabInventario">
+          <div class="card-body-erp text-muted-erp" id="resumenInventario">Cargando…</div>
+          <div class="d-flex justify-content-end px-2">
+            <span class="badge-count" id="countInventario"></span>
+          </div>
+          <div class="table-responsive-erp">
+            <table class="table-erp">
+              <thead>
+                <tr>
+                  <th>Código</th><th>Producto</th><th class="text-end">Cantidad actual</th>
+                  <th class="text-end">Valor unit. prom.</th><th class="text-end">Valor total</th>
+                  <th class="text-end">Stock mínimo</th><th>Estado</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyInventario"><tr><td colspan="7" class="text-muted-erp">Cargando…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+  <script src="../../config.js"></script>
+  <script src="../../auth.js"></script>
+  <script src="../../api-client.js"></script>
+  <script src="../../ui-components.js"></script>
+  <script src="../../utils.js"></script>
+  <script src="../../moneda-config.js"></script>
+  <script src="../../layout.js"></script>
+  <script src="reportes.js"></script>
+</body>
+</html>

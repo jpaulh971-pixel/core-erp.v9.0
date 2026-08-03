@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Importación de Datos — Core ERP Almacén de Exportación</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" />
+  <link rel="stylesheet" href="../../erp.css" />
+  <style>
+    .nav-tabs-erp { border-bottom: 1px solid var(--erp-border); margin-bottom: 0; }
+    .nav-tabs-erp .nav-link {
+      color: var(--erp-text-muted); font-weight: 600; font-size: 13px; border: none;
+      border-bottom: 2px solid transparent; border-radius: 0;
+    }
+    .nav-tabs-erp .nav-link.active { color: var(--erp-primary); border-bottom-color: var(--erp-primary); background: transparent; }
+    .nota-contrato { font-size: 11.5px; }
+    .stat-box {
+      background: #fafbfd; border: 1px solid var(--erp-border); border-radius: var(--erp-radius);
+      padding: 12px 16px; flex: 1 1 140px; min-width: 130px;
+    }
+    .stat-box .stat-valor { font-size: 20px; font-weight: 800; line-height: 1.2; }
+    .stat-box .stat-etiqueta { font-size: 11.5px; color: var(--erp-text-muted); }
+    .dropzone-carga {
+      border: 1.5px dashed var(--erp-border); border-radius: var(--erp-radius);
+      padding: 18px; background: #fafbfd; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    }
+    .corte-box {
+      background: #fafbfd; border: 1px solid var(--erp-border); border-radius: var(--erp-radius);
+      padding: 12px 16px; display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div id="erpApp">
+    <div class="page-header">
+      <div>
+        <div class="breadcrumb-erp"><b>Módulos</b> / Importación de Datos</div>
+        <h1>Importación Masiva de Datos</h1>
+        <div class="text-muted-erp">Carga desde Excel de saldo inicial, compras y ventas históricas, con vista previa y validación antes de confirmar.</div>
+      </div>
+    </div>
+
+    <div id="estadoError" class="alert alert-danger" style="display:none"></div>
+
+    <div class="erp-card mb-3">
+      <div class="card-body-erp">
+        <div class="filtros-bar" style="border:none; padding:0; background:transparent;">
+          <div class="filtro-item">
+            <label class="form-label-erp" for="selectInventario">Almacén / Inventario</label>
+            <select id="selectInventario" class="form-select form-select-sm" style="min-width:280px;">
+              <option value="">Cargando almacenes…</option>
+            </select>
+          </div>
+          <div class="filtro-item">
+            <span class="form-label-erp">&nbsp;</span>
+            <span class="text-muted-erp" id="infoInventarioSeleccionado">Selecciona un almacén para habilitar la importación.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="erp-card">
+      <ul class="nav nav-tabs-erp px-2 pt-2" role="tablist">
+        <li class="nav-item">
+          <button class="nav-link active" id="tabBtnSaldoInicial" data-bs-toggle="tab" data-bs-target="#tabSaldoInicial" type="button">
+            <i class="bi bi-box-seam me-1"></i>Saldo Inicial
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" id="tabBtnCompras" data-bs-toggle="tab" data-bs-target="#tabCompras" type="button">
+            <i class="bi bi-cart-check me-1"></i>Compras
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" id="tabBtnVentas" data-bs-toggle="tab" data-bs-target="#tabVentas" type="button">
+            <i class="bi bi-cart3 me-1"></i>Ventas
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" id="tabBtnHistorial" data-bs-toggle="tab" data-bs-target="#tabHistorial" type="button">
+            <i class="bi bi-clock-history me-1"></i>Historial de Importaciones
+          </button>
+        </li>
+      </ul>
+
+      <div class="tab-content">
+
+        <!-- ================= SALDO INICIAL ================= -->
+        <div class="tab-pane fade show active" id="tabSaldoInicial">
+          <div class="card-body-erp">
+            <div id="errorSaldoInicial" class="alert alert-danger" style="display:none"></div>
+
+            <div class="dropzone-carga mb-3">
+              <div style="flex:1 1 260px;">
+                <label class="form-label-erp" for="inputArchivoSaldoInicial">Archivo Excel de saldo inicial</label>
+                <input type="file" id="inputArchivoSaldoInicial" class="form-control form-control-sm" accept=".xlsx,.xls" />
+              </div>
+              <button type="button" id="btnPrevisualizarSaldoInicial" class="btn btn-erp-primary btn-sm">
+                <i class="bi bi-eye me-1"></i>Previsualizar
+              </button>
+            </div>
+
+            <div id="resumenSaldoInicial" style="display:none">
+              <div class="d-flex flex-wrap gap-2 mb-3" id="statsSaldoInicial"></div>
+
+              <div id="bloqueErroresSaldoInicial" style="display:none" class="mb-3">
+                <div class="card-header-erp mb-0"><i class="bi bi-exclamation-triangle me-1"></i>Errores de validación</div>
+                <div class="table-responsive-erp">
+                  <table class="table-erp">
+                    <thead><tr><th style="width:110px;">Fila</th><th>Detalle</th></tr></thead>
+                    <tbody id="tbodyErroresSaldoInicial"></tbody>
+                  </table>
+                </div>
+              </div>
+
+              <button type="button" id="btnConfirmarSaldoInicial" class="btn btn-erp-primary btn-sm">
+                <i class="bi bi-check2-circle me-1"></i>Confirmar Importación
+              </button>
+              <span class="text-muted-erp ms-2" id="notaConfirmarSaldoInicial"></span>
+
+              <div id="resultadoConfirmSaldoInicial" class="mt-3" style="display:none"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= COMPRAS ================= -->
+        <div class="tab-pane fade" id="tabCompras">
+          <div class="card-body-erp">
+            <div id="errorCompras" class="alert alert-danger" style="display:none"></div>
+
+            <div class="corte-box">
+              <div>
+                <label class="form-label-erp" for="inputFechaCorteCompras">Fecha de corte del inventario</label>
+                <input type="datetime-local" id="inputFechaCorteCompras" class="form-control form-control-sm" style="min-width:220px;" />
+              </div>
+              <button type="button" id="btnGuardarFechaCorteCompras" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-save me-1"></i>Guardar fecha de corte
+              </button>
+              <span class="text-muted-erp nota-contrato" id="notaFechaCorteCompras">
+                Filas con fecha ≤ corte se registran como histórico; posteriores, como operativo. Es opcional si el Excel ya indica el tipo de movimiento por fila.
+              </span>
+            </div>
+
+            <div class="dropzone-carga mb-3">
+              <div style="flex:1 1 260px;">
+                <label class="form-label-erp" for="inputArchivoCompras">Archivo Excel de compras históricas</label>
+                <input type="file" id="inputArchivoCompras" class="form-control form-control-sm" accept=".xlsx,.xls" />
+              </div>
+              <button type="button" id="btnPrevisualizarCompras" class="btn btn-erp-primary btn-sm">
+                <i class="bi bi-eye me-1"></i>Previsualizar
+              </button>
+            </div>
+
+            <div id="resumenCompras" style="display:none">
+              <div class="d-flex flex-wrap gap-2 mb-3" id="statsCompras"></div>
+
+              <div id="bloqueErroresCompras" style="display:none" class="mb-3">
+                <div class="card-header-erp mb-0"><i class="bi bi-exclamation-triangle me-1"></i>Errores de validación</div>
+                <div class="table-responsive-erp">
+                  <table class="table-erp">
+                    <thead><tr><th style="width:110px;">Fila</th><th>Detalle</th></tr></thead>
+                    <tbody id="tbodyErroresCompras"></tbody>
+                  </table>
+                </div>
+              </div>
+
+              <button type="button" id="btnConfirmarCompras" class="btn btn-erp-primary btn-sm">
+                <i class="bi bi-check2-circle me-1"></i>Confirmar Importación
+              </button>
+              <span class="text-muted-erp ms-2" id="notaConfirmarCompras"></span>
+
+              <div id="resultadoConfirmCompras" class="mt-3" style="display:none"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= VENTAS ================= -->
+        <div class="tab-pane fade" id="tabVentas">
+          <div class="card-body-erp">
+            <div id="errorVentas" class="alert alert-danger" style="display:none"></div>
+
+            <div class="corte-box">
+              <div>
+                <label class="form-label-erp" for="inputFechaCorteVentas">Fecha de corte del inventario</label>
+                <input type="datetime-local" id="inputFechaCorteVentas" class="form-control form-control-sm" style="min-width:220px;" />
+              </div>
+              <button type="button" id="btnGuardarFechaCorteVentas" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-save me-1"></i>Guardar fecha de corte
+              </button>
+              <span class="text-muted-erp nota-contrato" id="notaFechaCorteVentas">
+                Filas con fecha ≤ corte se registran como histórico; posteriores, como operativo. Es opcional si el Excel ya indica el tipo de movimiento por fila.
+              </span>
+            </div>
+
+            <div class="dropzone-carga mb-3">
+              <div style="flex:1 1 260px;">
+                <label class="form-label-erp" for="inputArchivoVentas">Archivo Excel de ventas históricas</label>
+                <input type="file" id="inputArchivoVentas" class="form-control form-control-sm" accept=".xlsx,.xls" />
+              </div>
+              <button type="button" id="btnPrevisualizarVentas" class="btn btn-erp-primary btn-sm">
+                <i class="bi bi-eye me-1"></i>Previsualizar
+              </button>
+            </div>
+
+            <div id="resumenVentas" style="display:none">
+              <div class="d-flex flex-wrap gap-2 mb-3" id="statsVentas"></div>
+
+              <div id="bloqueErroresVentas" style="display:none" class="mb-3">
+                <div class="card-header-erp mb-0"><i class="bi bi-exclamation-triangle me-1"></i>Errores de validación</div>
+                <div class="table-responsive-erp">
+                  <table class="table-erp">
+                    <thead><tr><th style="width:110px;">Fila</th><th>Detalle</th></tr></thead>
+                    <tbody id="tbodyErroresVentas"></tbody>
+                  </table>
+                </div>
+              </div>
+
+              <button type="button" id="btnConfirmarVentas" class="btn btn-erp-primary btn-sm">
+                <i class="bi bi-check2-circle me-1"></i>Confirmar Importación
+              </button>
+              <span class="text-muted-erp ms-2" id="notaConfirmarVentas"></span>
+
+              <div id="resultadoConfirmVentas" class="mt-3" style="display:none"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= HISTORIAL ================= -->
+        <div class="tab-pane fade" id="tabHistorial">
+          <div class="card-body-erp pb-0">
+            <div id="errorHistorial" class="alert alert-danger" style="display:none"></div>
+            <div class="filtros-bar" style="border:none; padding:0; background:transparent;">
+              <div class="filtro-item">
+                <label class="form-label-erp" for="selectTipoHistorial">Tipo</label>
+                <select id="selectTipoHistorial" class="form-select form-select-sm">
+                  <option value="">Todos</option>
+                  <option value="SALDO_INICIAL">Saldo Inicial</option>
+                  <option value="COMPRAS">Compras</option>
+                  <option value="VENTAS">Ventas</option>
+                </select>
+              </div>
+              <div class="filtro-item">
+                <label class="form-label-erp" for="checkSoloEsteAlmacen">&nbsp;</label>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="checkSoloEsteAlmacen" checked />
+                  <label class="form-check-label text-muted-erp" for="checkSoloEsteAlmacen">Solo el almacén seleccionado</label>
+                </div>
+              </div>
+              <div class="filtro-item">
+                <span class="form-label-erp">&nbsp;</span>
+                <button type="button" id="btnActualizarHistorial" class="btn btn-outline-secondary btn-sm">
+                  <i class="bi bi-arrow-clockwise me-1"></i>Actualizar
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="table-responsive-erp">
+            <table class="table-erp">
+              <thead>
+                <tr>
+                  <th>Tipo</th><th>Archivo</th><th>Almacén</th><th>Estado</th>
+                  <th class="text-end">Filas</th><th class="text-end">Válidas</th><th class="text-end">Con error</th>
+                  <th>Creada</th><th>Confirmada</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyHistorial"><tr><td colspan="9" class="text-muted-erp">Selecciona un almacén…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+  <script src="../../config.js"></script>
+  <script src="../../auth.js"></script>
+  <script src="../../api-client.js"></script>
+  <script src="../../ui-components.js"></script>
+  <script src="../../utils.js"></script>
+  <script src="../../moneda-config.js"></script>
+  <script src="../../layout.js"></script>
+  <script src="importacion_datos.js"></script>
+</body>
+</html>

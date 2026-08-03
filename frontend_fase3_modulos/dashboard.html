@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Core ERP Almacén de Exportación</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" />
+  <link rel="stylesheet" href="erp.css" />
+
+  <style>
+    .kpi-card { padding: 16px; overflow: visible; }
+    .kpi-label {
+      font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em;
+      color: var(--erp-text-muted); font-weight: 700;
+    }
+    /* FIX: los valores largos (montos con miles, decimales y simbolo de
+       moneda) se cortaban porque .erp-card tiene overflow:hidden y el
+       texto no rompia linea. clamp() reduce el tamano de fuente en
+       pantallas angostas y overflow-wrap permite que el valor pase a una
+       segunda linea en vez de recortarse. */
+    .kpi-value {
+      font-size: clamp(15px, 1.6vw, 22px);
+      font-weight: 800;
+      margin-top: 6px;
+      overflow-wrap: break-word;
+      word-break: break-word;
+      line-height: 1.15;
+    }
+  </style>
+</head>
+<body>
+  <div id="erpApp">
+    <div class="page-header">
+      <div>
+        <div class="breadcrumb-erp"><b>Principal</b> / Dashboard</div>
+        <h1>Dashboard</h1>
+      </div>
+      <button type="button" id="btnActualizar" class="btn btn-erp-primary btn-sm">
+        <i class="bi bi-arrow-clockwise me-1"></i>Actualizar
+      </button>
+    </div>
+
+    <div id="estadoError" class="alert alert-danger" style="display:none"></div>
+
+    <!-- KPIs de resumen ejecutivo.
+         FIX: columnas responsivas (col-6/col-md-4/col-lg-3) en vez del
+         ancho fijo "width:20%" anterior, que en pantallas angostas dejaba
+         muy poco espacio para valores largos (montos con miles, decimales
+         y simbolo de moneda) y estos se recortaban por el overflow:hidden
+         de .erp-card. -->
+    <div class="row g-3 mb-3">
+      <div class="col-6 col-md-4 col-lg-3">
+        <div class="erp-card kpi-card">
+          <div class="kpi-label">Productos activos</div>
+          <div class="kpi-value" id="kpiProductosActivos">—</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-lg-3">
+        <div class="erp-card kpi-card">
+          <div class="kpi-label">Valor total inventario</div>
+          <div class="kpi-value" id="kpiValorInventario">—</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-lg-3">
+        <div class="erp-card kpi-card">
+          <div class="kpi-label">Bajo stock mínimo</div>
+          <div class="kpi-value" id="kpiBajoStock">—</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-lg-3">
+        <div class="erp-card kpi-card">
+          <div class="kpi-label">Vendido (despachadas)</div>
+          <div class="kpi-value" id="kpiVendidoDespachadas">—</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-lg-3">
+        <div class="erp-card kpi-card">
+          <div class="kpi-label">Comprado (recibidas)</div>
+          <div class="kpi-value" id="kpiCompradoRecibidas">—</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-lg-3">
+        <div class="erp-card kpi-card">
+          <div class="kpi-label">Costos adicionales</div>
+          <div class="kpi-value" id="kpiCostosAdicionales">—</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-lg-3">
+        <div class="erp-card kpi-card">
+          <div class="kpi-label">Costo unitario promedio</div>
+          <div class="kpi-value" id="kpiCostoUnitarioPromedio">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Producto de mayor y menor costo (solo lectura, viene de m01_dashboard/resumen) -->
+    <div class="row g-3 mb-3">
+      <div class="col-lg-6">
+        <div class="erp-card kpi-card">
+          <div class="kpi-label"><i class="bi bi-arrow-up-circle me-1"></i>Producto con mayor costo</div>
+          <div class="kpi-value" id="kpiProductoMayorCosto" style="font-size:16px;">—</div>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="erp-card kpi-card">
+          <div class="kpi-label"><i class="bi bi-arrow-down-circle me-1"></i>Producto con menor costo</div>
+          <div class="kpi-value" id="kpiProductoMenorCosto" style="font-size:16px;">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+      <div class="col-lg-6">
+        <div class="erp-card">
+          <div class="card-header-erp"><i class="bi bi-cart-check me-1"></i>Órdenes de venta por estado</div>
+          <div class="table-responsive-erp">
+            <table class="table-erp">
+              <thead><tr><th>Estado</th><th class="text-end">Cantidad</th></tr></thead>
+              <tbody id="tbodyOrdenesEstado"><tr><td colspan="2" class="text-muted-erp">Cargando…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="erp-card">
+          <div class="card-header-erp"><i class="bi bi-coin me-1"></i>Costos adicionales por tipo</div>
+          <div class="table-responsive-erp">
+            <table class="table-erp">
+              <thead><tr><th>Tipo</th><th class="text-end">Monto</th></tr></thead>
+              <tbody id="tbodyCostosTipo"><tr><td colspan="2" class="text-muted-erp">Cargando…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="erp-card">
+      <div class="card-header-erp"><i class="bi bi-exclamation-triangle me-1"></i>Alertas de stock mínimo</div>
+      <div class="table-responsive-erp">
+        <table class="table-erp">
+          <thead>
+            <tr><th>Código</th><th>Producto</th><th class="text-end">Stock actual</th><th class="text-end">Stock mínimo</th></tr>
+          </thead>
+          <tbody id="tbodyAlertasStock"><tr><td colspan="4" class="text-muted-erp">Cargando…</td></tr></tbody>
+        </table>
+      </div>
+      <div class="card-body-erp text-muted-erp" id="footerGenerado"></div>
+    </div>
+
+    <!-- Stock valorizado por producto: mismo endpoint y mismos campos que ya
+         usan Inventario, Productos y Reportes (GET /api/reportes/inventario-valorizado),
+         para garantizar que el costo unitario mostrado sea idéntico en todas
+         las pantallas. -->
+    <div class="erp-card mt-3">
+      <div class="card-header-erp"><i class="bi bi-boxes me-1"></i>Stock valorizado por producto</div>
+      <div class="table-responsive-erp">
+        <table class="table-erp">
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Producto</th>
+              <th class="text-end">Cantidad actual</th>
+              <th class="text-end">Costo unitario</th>
+              <th class="text-end">Valor total</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyStockValorizado"><tr><td colspan="5" class="text-muted-erp">Cargando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+  <script src="config.js"></script>
+  <script src="auth.js"></script>
+  <script src="api-client.js"></script>
+  <script src="ui-components.js"></script>
+  <script src="utils.js"></script>
+  <script src="moneda-config.js"></script>
+  <script src="layout.js"></script>
+  <script src="dashboard.js"></script>
+</body>
+</html>
